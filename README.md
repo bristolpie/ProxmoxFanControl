@@ -67,6 +67,8 @@ You can flash the Arduino straight from the Proxmox host over the same USB cable
 | `./flash.sh --hex file.hex` | Flashes a `.hex` you already have | `avrdude` |
 | `./flash.sh --build` | Compiles from source on the host, then flashes. Use this if you've changed the sketch | `arduino-cli` + AVR core (~150 MB) |
 
+`--release` downloads without logging in to GitHub, so it only works when the repository is public. For a private fork, use `--build`.
+
 It tries both the new (115200 baud) and old (57600 baud) Nano bootloaders, so you don't need to know which one your board has. Use `--port` if you have more than one USB serial device.
 
 If the host is a VM with the Arduino passed through, run the script inside the VM. To flash from a PC with the Arduino IDE instead: open `arduino/fan_zone_control`, choose board **Arduino Nano** (for clones, processor *ATmega328P (Old Bootloader)*), and upload.

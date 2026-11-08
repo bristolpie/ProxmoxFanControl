@@ -367,7 +367,28 @@ $$("#pwm-mode button").forEach(b => b.onclick = () => {
 
 const zoneColor = id => css(["", "--s-z1", "--s-z2", "--s-z3"][id]);
 const MODE_LABEL = { auto: "Auto", floor: "Floor", manual: "Manual", emergency: "EMERGENCY", "sensor-fail": "Sensor fail" };
-let zoneDrafts = {};   // zid -> slider % while user is editing
+let zoneDrafts = {};   // zid -> slider % moved by the user but not yet sent
+
+// Manual-override controls: make the two-step "drag, then Hold" obvious.
+function updateManual(card, zid) {
+  const z = status.zones.find(q => q.id === zid); if (!z) return;
+  const ov = z.override, draft = zoneDrafts[zid];
+  const slider = $("input[type=range]", card), set = $(".zset", card), rel = $(".zrel", card), hint = $(".zhint", card);
+  if (draft == null && document.activeElement !== slider) slider.value = ov ? pct(ov.pwm) : z.percent;
+  $(".zslv", card).textContent = slider.value + "%";
+  if (draft != null) {
+    set.textContent = `Hold at ${draft}%`; set.classList.add("primary");
+    rel.textContent = "Cancel"; rel.disabled = false;
+    hint.textContent = ov ? `Press "Hold at ${draft}%" to change the held speed.`
+                          : `Not applied yet. Press "Hold at ${draft}%" to override auto.`;
+  } else {
+    set.textContent = ov ? "Hold" : `Hold at ${z.percent}%`; set.classList.remove("primary");
+    rel.textContent = "Return to auto"; rel.disabled = !ov;
+    hint.textContent = z.mode === "emergency" ? "Emergency cooling is active and overrides manual holds."
+      : ov ? `Holding ${pct(ov.pwm)}% ${ov.until ? "until " + clock(ov.until) : "until released"}.`
+      : "Following the curve. Drag to pick a fixed speed.";
+  }
+}
 
 function renderStatus(st) {
   const first = !status;
@@ -415,24 +436,28 @@ function renderStatus(st) {
         <div class="meter"><div></div></div>
         <dl class="kv"></dl>
         <div class="manual-box">
-          <div class="row" style="justify-content:space-between"><b style="font-size:13px">Manual</b><span class="num zslv sub"></span></div>
-          <input type="range" min="0" max="100" step="1">
+          <div class="row" style="justify-content:space-between"><b style="font-size:13px">Manual override</b><span class="num zslv sub"></span></div>
+          <input type="range" min="0" max="100" step="1" aria-label="Manual fan speed">
+          <div class="sub zhint" style="margin:2px 0 8px"></div>
           <div class="row">
-            <select class="zhold"><option value="15">15 min</option><option value="60" selected>1 hour</option><option value="240">4 hours</option><option value="0">Until released</option></select>
+            <select class="zhold" aria-label="Hold duration"><option value="15">15 min</option><option value="60" selected>1 hour</option><option value="240">4 hours</option><option value="0">Until released</option></select>
             <button class="btn zset">Hold</button>
             <button class="btn zrel">Return to auto</button>
           </div>
         </div>`;
       zc.appendChild(card);
       const slider = $("input[type=range]", card);
-      slider.oninput = () => { zoneDrafts[z.id] = +slider.value; $(".zslv", card).textContent = slider.value + "%"; };
+      slider.oninput = () => { zoneDrafts[z.id] = +slider.value; updateManual(card, z.id); };
       $(".zset", card).onclick = async () => {
         const v = zoneDrafts[z.id] ?? +slider.value, min = +$(".zhold", card).value;
         try { await api("api/override", "POST", { zone: z.id, pwm: Math.round(v * 2.55), minutes: min || null }); delete zoneDrafts[z.id]; poll(); }
         catch (e) { alert(e.message); }
       };
       $(".zrel", card).onclick = async () => {
-        try { await api("api/override", "POST", { zone: z.id, pwm: null }); delete zoneDrafts[z.id]; poll(); } catch (e) { alert(e.message); }
+        const ovNow = status.zones.find(q => q.id === z.id)?.override;
+        delete zoneDrafts[z.id];
+        if (!ovNow) { updateManual(card, z.id); return; }        // just cancelling an unsent change
+        try { await api("api/override", "POST", { zone: z.id, pwm: null }); poll(); } catch (e) { alert(e.message); }
       };
     }
     $(".zname", card).textContent = `Z${z.id} · ${z.name}`;
@@ -445,13 +470,8 @@ function renderStatus(st) {
       <dt>Follows</dt><dd>${z.source.toUpperCase()} avg ${fmtT(z.temp)}°C</dd>
       <dt>Curve → held</dt><dd class="num">${z.curve_pwm ?? "–"} → ${z.hyst_pwm}${z.peak != null ? ` <span class="sub">(peak ${fmtT(z.peak)}°C)</span>` : ""}</dd>
       <dt>Floor</dt><dd>${z.floor_active ? "active" : "off"}</dd>
-      <dt>Sent to Arduino</dt><dd class="num">${z.applied ?? "–"}</dd>
-      ${ov ? `<dt>Manual hold</dt><dd>${pct(ov.pwm)}% ${ov.until ? "until " + clock(ov.until) : "until released"}</dd>` : ""}`;
-    const slider = $("input[type=range]", card);
-    if (zoneDrafts[z.id] == null && document.activeElement !== slider) {
-      slider.value = ov ? pct(ov.pwm) : z.percent; $(".zslv", card).textContent = slider.value + "%";
-    }
-    $(".zrel", card).disabled = !ov;
+      <dt>Sent to Arduino</dt><dd class="num">${z.applied ?? "–"}</dd>`;
+    updateManual(card, z.id);
   }
 
   // disks

@@ -28,6 +28,7 @@
   --shadow: none; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+html { scrollbar-gutter: stable; }   /* same width whether or not the tab scrolls */
 html, body { margin: 0; background: var(--bg); color: var(--text);
   font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 .num { font-variant-numeric: tabular-nums; }
@@ -43,7 +44,8 @@ header { position: sticky; top: 0; z-index: 10; background: var(--panel); border
 nav { max-width: 1280px; margin: 0 auto; padding: 0 16px; display: flex; gap: 4px; }
 nav button { background: none; border: none; color: var(--muted); padding: 8px 12px; cursor: pointer;
   font: inherit; border-bottom: 2px solid transparent; }
-nav button.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+nav button { font-weight: 600; }   /* same weight active or not, so labels don't shift */
+nav button.active { color: var(--text); border-bottom-color: var(--accent); }
 main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .banner { background: var(--bad); color: #fff; padding: 10px 14px; border-radius: var(--radius); margin-bottom: 14px; font-weight: 600; }
 .banner.warn { background: var(--warn); }
@@ -100,7 +102,8 @@ svg.chart text { fill: var(--muted); font-size: 11px; }
 .field .help { color: var(--muted); font-size: 12px; }
 .field input[type=number], .field input[type=text], .field input[type=password], .field select { width: 100%; }
 .check { display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 13px; }
-.savebar { position: sticky; bottom: 0; background: var(--panel); border-top: 1px solid var(--line); padding: 10px 16px; margin: 16px -16px -16px;
+.savebar { position: sticky; bottom: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 10px 14px; margin-top: 14px;
   display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
 .msg { color: var(--muted); font-size: 13px; margin-right: auto; }
 .msg.err { color: var(--bad); } .msg.ok { color: var(--ok); }

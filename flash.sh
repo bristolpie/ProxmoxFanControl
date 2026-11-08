@@ -71,7 +71,11 @@ case "$MODE" in
         [[ "$REPO" =~ ^[^/]+/[^/]+$ ]] || die "can't work out the GitHub repo — pass --repo owner/name"
         dl="https://github.com/$REPO/releases/latest/download/fan_zone_control.hex"
         c_info "downloading $dl"
-        curl -fsSL -o "$WORK/fan_zone_control.hex" "$dl" || die "download failed (is there a release with fan_zone_control.hex?)"
+        if ! curl -fsSL -o "$WORK/fan_zone_control.hex" "$dl"; then
+            c_warn "download failed: either $REPO has no release yet (releases are built when a v* tag is pushed),"
+            c_warn "or the repository is private (release files can't be downloaded without logging in)."
+            die "use './flash.sh --build' to compile on this host instead"
+        fi
         HEX="$WORK/fan_zone_control.hex"
         need_avrdude ;;
     hex)

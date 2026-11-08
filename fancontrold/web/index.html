@@ -122,7 +122,7 @@ svg.chart text { fill: var(--muted); font-size: 11px; }
     <div class="spacer"></div>
     <span class="row" style="gap:6px"><label class="sub" for="profile-mode">Profile</label>
     <select id="profile-mode" title="Profile mode">
-      <option value="auto">Auto</option><option value="idle">Idle</option>
+      <option value="auto">Auto</option>
       <option value="normal">Normal</option><option value="scrub">Scrub</option>
     </select></span>
     <button class="btn" id="boost" title="All zones 100% for 10 minutes">Boost 10 min</button>
@@ -189,7 +189,7 @@ svg.chart text { fill: var(--muted); font-size: 11px; }
       <span class="sub" id="c-uses"></span>
     </div>
     <div class="row" style="margin-bottom:12px">
-      <div class="seg" id="c-profile"><button data-v="idle">Idle</button><button data-v="normal" class="on">Normal</button><button data-v="scrub">Scrub</button></div>
+      <div class="seg" id="c-profile"><button data-v="normal" class="on">Normal</button><button data-v="scrub">Scrub</button></div>
       <label class="check" id="c-same-wrap"><input type="checkbox" id="c-same"> Same as normal</label>
     </div>
     <div class="editor-grid">
@@ -516,7 +516,7 @@ function renderStatus(st) {
   const last = history.rows[history.rows.length - 1];
   if (!last || st.time - last[0] >= (st.interval || 5) - 0.5) {
     const z = Object.fromEntries(st.zones.map(q => [q.id, q]));
-    history.rows.push([Math.floor(st.time), t.cpu.raw, t.disk.raw, z[1]?.pwm, z[2]?.pwm, z[3]?.pwm, z[1]?.rpm, z[2]?.rpm, z[3]?.rpm, ["idle", "normal", "scrub"].indexOf(p.active)]);
+    history.rows.push([Math.floor(st.time), t.cpu.raw, t.disk.raw, z[1]?.pwm, z[2]?.pwm, z[3]?.pwm, z[1]?.rpm, z[2]?.rpm, z[3]?.rpm, (p.active === "scrub" ? 2 : 1)]);
     const cutoff = Date.now() / 1000 - rangeMin * 60;
     while (history.rows.length && history.rows[0][0] < cutoff) history.rows.shift();
     if (tab === "dash") drawHistory();
@@ -587,7 +587,7 @@ function curveObj() {
   return c;
 }
 const curveColor = () => css(PALETTE[config.curves.indexOf(curveObj()) % PALETTE.length]);
-const resolved = (c, p) => c.points[p] || c.points.normal;          // idle/scrub may be null = same as normal
+const resolved = (c, p) => c.points[p] || c.points.normal;          // scrub may be null = same as normal
 const editable = () => cProfile === "normal" || !!curveObj().points[cProfile];
 const curve = () => resolved(curveObj(), cProfile);
 const sensorAvg = (id) => status?.sensors?.find(s => s.id === id)?.avg;
@@ -628,7 +628,7 @@ function askName(title, initial) {
 }
 $("#c-new").onclick = () => {
   const n = askName("Name for the new curve:", ""); if (!n) return;
-  config.curves.push({ name: n, sensor: curveObj().sensor, points: { normal: [[30, 50], [50, 120], [70, 220]], idle: null, scrub: null } });
+  config.curves.push({ name: n, sensor: curveObj().sensor, points: { normal: [[30, 50], [50, 120], [70, 220]], scrub: null } });
   cName = n; cProfile = "normal"; $$("#c-profile button").forEach(x => x.classList.toggle("on", x.dataset.v === "normal"));
   selected = -1; drawCurve();
 };
@@ -676,9 +676,9 @@ function drawCurve() {
     el("text", { x: x(emT) - 4, y: m.t + 12, "text-anchor": "end", style: `fill:${css("--bad")}` }, svg).textContent = "emergency";
   }
   // other profiles of this curve, dashed (skipped when they're just "same as normal")
-  const ghostColors = { idle: css("--s-z1"), normal: css("--muted"), scrub: css("--s-disk") };
+  const ghostColors = { normal: css("--muted"), scrub: css("--s-disk") };
   const lg = [];
-  for (const p of ["idle", "normal", "scrub"]) {
+  for (const p of ["normal", "scrub"]) {
     if (p === cProfile || (p !== "normal" && !co.points[p]) || (!canEdit && p === "normal")) continue;
     const g = co.points[p];
     const pts = [[tLo, g[0][1]], ...g, [tHi, g[g.length - 1][1]]];
@@ -754,7 +754,7 @@ function renderPoints() {
   });
   $$("#c-points [data-del]").forEach(b => b.onclick = () => { c.splice(+b.dataset.del, 1); selected = -1; drawCurve(); });
   $("#c-add").disabled = !canEdit;
-  const bad = config.curves.some(cc => ["normal", "idle", "scrub"].some(p => {
+  const bad = config.curves.some(cc => ["normal", "scrub"].some(p => {
     const q = cc.points[p]; return q && q.some((pt, i) => i && pt[0] <= q[i - 1][0]);
   }));
   const dirtyNow = curvesDirty();
@@ -770,7 +770,7 @@ function renderPoints() {
     ${emT != null ? `<dt>Emergency</dt><dd>${emT}°C → ${pct(config.emergency.pwm)}%</dd>` : ""}`;
   const sel = $("#c-copy");
   sel.disabled = !canEdit;
-  sel.innerHTML = `<option value="">Copy points from…</option>` + config.curves.flatMap((cc, ci) => ["normal", "idle", "scrub"]
+  sel.innerHTML = `<option value="">Copy points from…</option>` + config.curves.flatMap((cc, ci) => ["normal", "scrub"]
     .filter(p => p === "normal" || cc.points[p]).filter(p => !(cc === co && p === cProfile))
     .map(p => `<option value="${ci}.${p}">${esc(cc.name)} · ${p}</option>`)).join("");
 }
@@ -818,7 +818,6 @@ const FIELDS = [
     ["temp_avg_samples", "Averaging samples", "number", "Rolling average depth. 3 × 5 s ≈ 15 s smoothing."],
     ["hysteresis", "Hysteresis (°C)", "number", "Temp must fall this far below its peak before fans slow down. Also applies to floors."],
     ["scrub_cooldown_cycles", "Scrub cooldown (cycles)", "number", "Stay in the scrub profile this many cycles after a scrub ends."],
-    ["profile.idle_load_below", "Auto idle below load", "number", "Pick the idle profile when 1-min load average is below this. Leave empty to disable."],
   ]],
   ["Safety", [
     ["emergency.cpu", "Emergency CPU (°C)", "number", "Raw CPU temp that forces every zone to emergency PWM, even over manual holds."],

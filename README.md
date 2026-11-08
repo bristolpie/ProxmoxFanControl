@@ -9,7 +9,7 @@ Temperature-driven fan control for a Proxmox / ZFS server, using an Arduino Nano
 - **Sensors found automatically.** CPU, every disk, NVMe drives, motherboard and GPU sensors (whatever the kernel exposes), plus combined sensors such as "hottest disk" and "hottest disk in ZFS pool `tank`".
 - **Named curves, 3 fan zones.** Make as many curves as you like, each reading any sensor. Each zone follows one curve, so several fans can share a curve or be tuned separately.
 - **Hysteresis, rolling averages and cross-zone floors.** Fans don't hunt up and down, and a hot sensor elsewhere can raise a zone's minimum speed (e.g. hot disks lift the CPU fans).
-- **Profiles.** `normal`, a `scrub` profile that switches on automatically during a ZFS scrub or resilver, and an optional `idle` profile.
+- **Profiles.** `normal`, and a `scrub` profile that switches on automatically during a ZFS scrub or resilver.
 - **Safety.** Emergency temperature thresholds put every fan at full speed, even over a manual setting. A sensor that can't be read falls back to a safe PWM. The Arduino ramps the fans up on its own if the host goes silent (watchdog).
 - **Web UI.** Live dashboard, 24 h history, a drag-and-drop curve editor, per-zone manual hold with timeout, and settings.
 - **Fan RPM.** Read from the fans' tach wires (optional).
@@ -101,7 +101,7 @@ Sensors are discovered automatically; nothing to configure. The dashboard's **Se
 
 What you see depends on your hardware and loaded drivers. If motherboard sensors are missing, run `sensors-detect` (from `lm-sensors`) and load the driver it suggests. Sensors are identified by driver, device and label, and disks by serial number, so a reboot that renumbers `hwmon3` or `sdb` doesn't move a curve onto a different sensor. Unconnected inputs reading 0 °C or 127 °C are ignored.
 
-A **curve** is a name, a sensor and its points. The **idle** and **scrub** profiles can have their own points or reuse the normal ones. Make curves on the **Curves** tab (New / Duplicate / Rename / Delete), then choose which curve each zone follows in **Settings → Zones**. Fans that cool the same thing can share a curve; give a fan its own curve when it needs different behaviour, e.g. a quieter rear fan.
+A **curve** is a name, a sensor and its points. The **scrub** profile can have its own points or reuse the normal ones. Make curves on the **Curves** tab (New / Duplicate / Rename / Delete), then choose which curve each zone follows in **Settings → Zones**. Fans that cool the same thing can share a curve; give a fan its own curve when it needs different behaviour, e.g. a quieter rear fan.
 
 ---
 
@@ -111,7 +111,7 @@ Every `interval` seconds (default 5):
 
 1. **Read** all sensors (see above).
 2. **Average** each sensor over the last `temp_avg_samples` readings (default 3, about 15 s).
-3. **Pick the profile.** If `zpool status` shows a scrub or resilver, use `scrub`, and stay there for `scrub_cooldown_cycles` after it ends. Otherwise use `normal`, or `idle` if `profile.idle_load_below` is set and the load is under it. You can also force a profile from the header dropdown.
+3. **Pick the profile.** If `zpool status` shows a scrub or resilver, use `scrub`, and stay there for `scrub_cooldown_cycles` after it ends. Otherwise use `normal`. You can also force a profile from the header dropdown.
 4. **Apply the zone's curve**, with **hysteresis**. Fans speed up immediately but only slow down once the temperature has dropped `hysteresis` °C (default 3) below the peak that set the current speed.
 5. **Apply the floor.** If the zone's floor sensor is above its threshold, the zone never goes below the floor PWM. The floor has the same hysteresis.
 6. **Overrides, in priority order:** emergency (any raw temp ≥ the emergency threshold → `emergency.pwm` on all zones) > manual hold from the UI > floor > curve.
@@ -129,7 +129,7 @@ On a clean stop the fans are set to `safe_exit_pwm` (100).
 | `temp_avg_samples` | 3 | Rolling average depth |
 | `hysteresis` | 3 | °C |
 | `scrub_cooldown_cycles` | 3 | |
-| `curves[]` | "CPU" and "Disks" | `{name, sensor, points: {normal, idle, scrub}}`. Points are `[temp °C, pwm 0-255]` with temperatures increasing. `idle`/`scrub` may be `null` = same as normal |
+| `curves[]` | "CPU" and "Disks" | `{name, sensor, points: {normal, scrub}}`. Points are `[temp °C, pwm 0-255]` with temperatures increasing. `scrub` may be `null` = same as normal |
 | `zones[]` | Z1 Disks, Z2/Z3 CPU | `{id, name, curve, floor: {sensor, above, pwm}}`. `floor` is optional |
 | `emergency` | cpu 90, disk 60, pwm 255 | Checked against the raw (not averaged) **CPU** and **Disks (max)** sensors |
 | `sensor_fail_pwm` | 200 | |
@@ -170,7 +170,7 @@ For Home Assistant, Grafana and similar tools, use `GET /api/status` (JSON) or `
 | GET | `/api/history?minutes=60&points=600` | Downsampled history (keeps peaks) |
 | GET / PUT | `/api/config` | Full config JSON. PUT validates and returns 400 with a message on error |
 | POST | `/api/override` | `{"zone": 1\|2\|3\|"all", "pwm": 0-255 or null to release, "minutes": 60 or null}` |
-| POST | `/api/profile` | `{"mode": "auto"\|"idle"\|"normal"\|"scrub"}` |
+| POST | `/api/profile` | `{"mode": "auto"\|"normal"\|"scrub"}` |
 | POST | `/api/reconnect` | Reopen the serial port |
 | GET | `/metrics` | Prometheus text format |
 

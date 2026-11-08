@@ -38,7 +38,7 @@ from urllib.parse import parse_qs, urlparse
 VERSION = "1.1.0"
 log = logging.getLogger("fancontrold")
 
-PROFILES = ("idle", "normal", "scrub")
+PROFILES = ("normal", "scrub")
 
 # Built-in sensor ids (see Controller._read_sensors for the full list).
 #   cpu         CPU package temp (coretemp / k10temp, or sensors.cpu path)
@@ -73,19 +73,16 @@ DEFAULT_CONFIG = {
         "detect_resilver": True,   # treat resilver like a scrub
     },
     "profile": {
-        "mode": "auto",            # auto | idle | normal | scrub
-        "idle_load_below": None,   # e.g. 0.5 → auto-select idle profile when 1-min loadavg below this
+        "mode": "auto",            # auto | normal | scrub
     },
-    # Named curves. Each reads one sensor. "idle"/"scrub" points may be null = same as normal.
+    # Named curves. Each reads one sensor. "scrub" points may be null = same as normal.
     "curves": [
         {"name": "CPU", "sensor": "cpu", "points": {
             "normal": [[30, 0], [40, 70], [50, 100], [60, 150], [70, 200], [75, 220]],
-            "idle":   [[30, 0], [40, 60], [50, 100], [60, 150], [70, 200], [75, 220]],
             "scrub":  [[30, 80], [40, 110], [50, 140], [60, 170], [70, 210], [75, 220]],
         }},
         {"name": "Disks", "sensor": "disks_max", "points": {
             "normal": [[30, 0], [35, 70], [42, 110], [50, 170], [55, 220]],
-            "idle":   [[30, 0], [35, 60], [42, 100], [50, 160], [55, 220]],
             "scrub":  [[25, 100], [32, 130], [40, 160], [48, 190], [55, 220]],
         }},
     ],
@@ -135,11 +132,22 @@ def migrate_config(user):
             changed = True
     if user.get("sensors", {}).pop("include_nvme", None) is not None:
         changed = True              # NVMe now has its own sensors (nvme_max)
+    # the idle profile was removed: drop its points and setting
+    for c in user.get("curves", []) if isinstance(user.get("curves"), list) else []:
+        if isinstance(c.get("points"), dict) and "idle" in c["points"]:
+            del c["points"]["idle"]
+            changed = True
+    prof = user.get("profile", {})
+    if prof.pop("idle_load_below", "-") != "-":
+        changed = True
+    if prof.get("mode") == "idle":
+        prof["mode"] = "auto"
+        changed = True
     return changed
 
 
 def curve_points(curve, profile):
-    """Points for a profile; idle/scrub fall back to normal when unset."""
+    """Points for a profile; scrub falls back to normal when unset."""
     return curve["points"].get(profile) or curve["points"]["normal"]
 
 
@@ -176,10 +184,7 @@ def validate_config(cfg):
     _num(cfg["serial"]["baud"], "serial.baud", 300, 2000000)
     _num(cfg["serial"]["watchdog_seconds"], "serial.watchdog_seconds", 0, 3600)
     if cfg["profile"]["mode"] not in ("auto",) + PROFILES:
-        raise ValueError("profile.mode must be auto, idle, normal or scrub")
-    il = cfg["profile"].get("idle_load_below")
-    if il is not None:
-        _num(il, "profile.idle_load_below", 0, 1000)
+        raise ValueError("profile.mode must be auto, normal or scrub")
     curves = cfg["curves"]
     if not isinstance(curves, list) or not curves:
         raise ValueError("curves must be a non-empty list")
@@ -945,9 +950,6 @@ class Controller:
             auto = "scrub"
         else:
             auto = "normal"
-            il = cfg["profile"].get("idle_load_below")
-            if il is not None and os.getloadavg()[0] < il:
-                auto = "idle"
         mode = cfg["profile"]["mode"]
         active = auto if mode == "auto" else mode
         if active != self.last_profile:
@@ -1088,7 +1090,7 @@ class Controller:
                 "cycle_ms": round((time.monotonic() - t_start) * 1000),
             }
             r = lambda v: None if v is None else round(v, 1)
-            pc = PROFILES.index(profile)
+            pc = 2 if profile == "scrub" else 1    # history column: 1 = normal, 2 = scrub
             pwm_by = {zo["id"]: zo["pwm"] for zo in zones_out}
             self.history.append([int(now), r(cpu_raw), r(disk_raw),
                                  pwm_by.get(1), pwm_by.get(2), pwm_by.get(3),
@@ -1272,7 +1274,7 @@ def make_handler(ctrl, cfgm):
                 cutoff = time.time() - minutes * 60
                 with ctrl.lock:
                     rows = [r for r in ctrl.history if r[0] >= cutoff]
-                return self._send(200, {"fields": HISTORY_FIELDS, "profiles": PROFILES,
+                return self._send(200, {"fields": HISTORY_FIELDS, "profiles": {"1": "normal", "2": "scrub"},
                                         "rows": downsample(rows, max(10, min(points, 5000)))})
             if u.path == "/api/config":
                 cfg = cfgm.get()

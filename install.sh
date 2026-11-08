@@ -98,15 +98,27 @@ fi
 # ── Anything else holding the serial port? (only one program can own it) ──
 if [[ -n "$PORT" ]]; then
     if command -v fuser >/dev/null; then
-        for pid in $(fuser "$(readlink -f "$PORT")" 2>/dev/null); do
-            unit=$(ps -o unit= -p "$pid" 2>/dev/null | tr -d ' ' || true)
-            [[ "$unit" == "$APP.service" ]] && continue
-            c_warn "$PORT is in use by PID $pid ($(ps -o comm= -p "$pid"))${unit:+, systemd unit $unit}"
+        # Re-scan after each stop: stopping a service also ends its child
+        # processes, which may have appeared in an earlier scan.
+        for _attempt in 1 2 3 4 5; do
+            holder=""
+            for pid in $(fuser "$(readlink -f "$PORT")" 2>/dev/null); do
+                [[ -d /proc/$pid ]] || continue                  # already exited
+                unit=$(ps -o unit= -p "$pid" 2>/dev/null | tr -d ' ' || true)
+                [[ "$unit" == "$APP.service" ]] && continue      # upgrading: our own service
+                holder=$pid; break
+            done
+            [[ -z "$holder" ]] && break
+            name=$(ps -o comm= -p "$holder" 2>/dev/null || true)
+            c_warn "$PORT is in use by PID $holder (${name:-exited})${unit:+, systemd unit $unit}"
             if [[ "$unit" == *.service ]] && ask "Stop and disable $unit so $APP can use the Arduino?"; then
                 systemctl disable --now "$unit" || true
                 c_ok "$unit stopped and disabled (its files are left in place)"
+                sleep 1
+            elif [[ ! -d /proc/$holder ]]; then
+                continue                                         # it went away on its own
             else
-                die "free the serial port first (stop PID $pid), then re-run"
+                die "free the serial port first (stop PID $holder), then re-run"
             fi
         done
     else

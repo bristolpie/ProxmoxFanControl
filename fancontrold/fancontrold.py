@@ -39,7 +39,14 @@ VERSION = "1.0.0"
 log = logging.getLogger("fancontrold")
 
 PROFILES = ("idle", "normal", "scrub")
-SOURCES = ("cpu", "disk")
+
+# Built-in sensor ids (see Controller._read_sensors for the full list).
+#   cpu         CPU package temp (coretemp / k10temp, or sensors.cpu path)
+#   disks_max   hottest SATA/SAS disk (smartctl), minus sensors.disk_exclude
+#   nvme_max    hottest NVMe drive (hwmon)
+#   pool:<name> hottest disk in that ZFS pool
+#   hwmon:<driver>:<device>:<label>   any kernel hwmon temperature
+#   disk:<serial>                     one disk
 
 DEFAULT_CONFIG = {
     "serial": {
@@ -54,15 +61,14 @@ DEFAULT_CONFIG = {
     "safe_exit_pwm": 100,          # sent on clean shutdown
     "sensor_fail_pwm": 200,        # used when a zone's sensor can't be read
     "emergency": {                 # raw temp at/above which ALL zones go to pwm (beats manual)
-        "cpu": 90,
-        "disk": 60,
+        "cpu": 90,                 # checked against the "cpu" sensor
+        "disk": 60,                # checked against "disks_max"
         "pwm": 255,
     },
     "sensors": {
         "cpu": "auto",             # "auto" (hwmon coretemp/k10temp) or path to a temp*_input file
         "disks": "auto",           # "auto" or list like ["/dev/sda", "/dev/sdb"]
-        "disk_exclude": [],        # e.g. ["sdd"]
-        "include_nvme": False,     # NVMe runs hotter; off = SATA/SAS only for the disk max
+        "disk_exclude": [],        # e.g. ["sdd"] — still shown, left out of disks_max / pool sensors
         "skip_standby": False,     # True = don't wake spun-down disks to read temp
         "detect_resilver": True,   # treat resilver like a scrub
     },
@@ -70,24 +76,24 @@ DEFAULT_CONFIG = {
         "mode": "auto",            # auto | idle | normal | scrub
         "idle_load_below": None,   # e.g. 0.5 → auto-select idle profile when 1-min loadavg below this
     },
-    "curves": {
-        "idle": {
-            "cpu":  [[30, 0], [40, 60], [50, 100], [60, 150], [70, 200], [75, 220]],
-            "disk": [[30, 0], [35, 60], [42, 100], [50, 160], [55, 220]],
-        },
-        "normal": {
-            "cpu":  [[30, 0], [40, 70], [50, 100], [60, 150], [70, 200], [75, 220]],
-            "disk": [[30, 0], [35, 70], [42, 110], [50, 170], [55, 220]],
-        },
-        "scrub": {
-            "cpu":  [[30, 80], [40, 110], [50, 140], [60, 170], [70, 210], [75, 220]],
-            "disk": [[25, 100], [32, 130], [40, 160], [48, 190], [55, 220]],
-        },
-    },
+    # Named curves. Each reads one sensor. "idle"/"scrub" points may be null = same as normal.
+    "curves": [
+        {"name": "CPU", "sensor": "cpu", "points": {
+            "normal": [[30, 0], [40, 70], [50, 100], [60, 150], [70, 200], [75, 220]],
+            "idle":   [[30, 0], [40, 60], [50, 100], [60, 150], [70, 200], [75, 220]],
+            "scrub":  [[30, 80], [40, 110], [50, 140], [60, 170], [70, 210], [75, 220]],
+        }},
+        {"name": "Disks", "sensor": "disks_max", "points": {
+            "normal": [[30, 0], [35, 70], [42, 110], [50, 170], [55, 220]],
+            "idle":   [[30, 0], [35, 60], [42, 100], [50, 160], [55, 220]],
+            "scrub":  [[25, 100], [32, 130], [40, 160], [48, 190], [55, 220]],
+        }},
+    ],
+    # Each zone follows a curve. Optional floor: if <sensor> is above <above>, PWM never drops below <pwm>.
     "zones": [
-        {"id": 1, "name": "Front", "source": "disk", "floor": {"source": "cpu",  "above": 60, "pwm": 100}},
-        {"id": 2, "name": "Top",   "source": "cpu",  "floor": {"source": "disk", "above": 45, "pwm": 90}},
-        {"id": 3, "name": "Rear",  "source": "cpu",  "floor": {"source": "disk", "above": 45, "pwm": 90}},
+        {"id": 1, "name": "Front", "curve": "Disks", "floor": {"sensor": "cpu",       "above": 60, "pwm": 100}},
+        {"id": 2, "name": "Top",   "curve": "CPU",   "floor": {"sensor": "disks_max", "above": 45, "pwm": 90}},
+        {"id": 3, "name": "Rear",  "curve": "CPU",   "floor": {"sensor": "disks_max", "above": 45, "pwm": 90}},
     ],
     "web": {
         "bind": "0.0.0.0",
@@ -105,10 +111,42 @@ DEFAULT_CONFIG = {
 # Config
 # ════════════════════════════════════════════════════════════════════
 
+def migrate_config(user):
+    """Upgrade an older config (fixed cpu/disk curves) to named curves. Returns True if changed."""
+    changed = False
+    old = user.get("curves")
+    if isinstance(old, dict):
+        names = {"cpu": ("CPU", "cpu"), "disk": ("Disks", "disks_max")}
+        user["curves"] = [
+            {"name": name, "sensor": sensor,
+             "points": {p: old[p][src] for p in PROFILES if p in old and src in old[p]}}
+            for src, (name, sensor) in names.items()
+        ]
+        changed = True
+    to_sensor = {"cpu": "cpu", "disk": "disks_max"}
+    to_curve = {"cpu": "CPU", "disk": "Disks"}
+    for z in user.get("zones", []):
+        if "source" in z:
+            z["curve"] = to_curve.get(z.pop("source"), "CPU")
+            changed = True
+        f = z.get("floor")
+        if f and "source" in f:
+            f["sensor"] = to_sensor.get(f.pop("source"), "cpu")
+            changed = True
+    if user.get("sensors", {}).pop("include_nvme", None) is not None:
+        changed = True              # NVMe now has its own sensors (nvme_max)
+    return changed
+
+
+def curve_points(curve, profile):
+    """Points for a profile; idle/scrub fall back to normal when unset."""
+    return curve["points"].get(profile) or curve["points"]["normal"]
+
+
 def deep_merge(base, override):
     out = copy.deepcopy(base)
     for k, v in (override or {}).items():
-        if isinstance(v, dict) and isinstance(out.get(k), dict) and k != "curves":
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
             out[k] = deep_merge(out[k], v)
         else:
             out[k] = copy.deepcopy(v)
@@ -142,22 +180,37 @@ def validate_config(cfg):
     il = cfg["profile"].get("idle_load_below")
     if il is not None:
         _num(il, "profile.idle_load_below", 0, 1000)
-    for prof in PROFILES:
-        if prof not in cfg["curves"]:
-            raise ValueError(f"curves.{prof} missing")
-        for src in SOURCES:
-            pts = cfg["curves"][prof].get(src)
-            name = f"curves.{prof}.{src}"
+    curves = cfg["curves"]
+    if not isinstance(curves, list) or not curves:
+        raise ValueError("curves must be a non-empty list")
+    names = set()
+    for c in curves:
+        n = c.get("name")
+        if not isinstance(n, str) or not n.strip():
+            raise ValueError("every curve needs a name")
+        if n in names:
+            raise ValueError(f"curve name '{n}' is used twice")
+        names.add(n)
+        if not isinstance(c.get("sensor"), str) or not c["sensor"]:
+            raise ValueError(f"curve '{n}' needs a sensor")
+        pts_by = c.get("points")
+        if not isinstance(pts_by, dict) or not pts_by.get("normal"):
+            raise ValueError(f"curve '{n}' needs normal points")
+        for prof in PROFILES:
+            pts = pts_by.get(prof)
+            if pts is None and prof != "normal":
+                continue
+            label = f"curve '{n}' ({prof})"
             if not isinstance(pts, list) or len(pts) < 2:
-                raise ValueError(f"{name} needs at least 2 points")
+                raise ValueError(f"{label} needs at least 2 points")
             last = -1e9
             for p in pts:
                 if not isinstance(p, (list, tuple)) or len(p) != 2:
-                    raise ValueError(f"{name}: each point must be [temp, pwm]")
-                _num(p[0], f"{name} temp", 0, 120)
-                _num(p[1], f"{name} pwm", 0, 255)
+                    raise ValueError(f"{label}: each point must be [temp, pwm]")
+                _num(p[0], f"{label} temp", 0, 120)
+                _num(p[1], f"{label} pwm", 0, 255)
                 if p[0] <= last:
-                    raise ValueError(f"{name}: temperatures must be strictly increasing")
+                    raise ValueError(f"{label}: temperatures must be strictly increasing")
                 last = p[0]
     ids = set()
     if not isinstance(cfg["zones"], list) or not cfg["zones"]:
@@ -166,12 +219,12 @@ def validate_config(cfg):
         if z.get("id") not in (1, 2, 3) or z["id"] in ids:
             raise ValueError("zone ids must be unique values 1-3")
         ids.add(z["id"])
-        if z.get("source") not in SOURCES:
-            raise ValueError(f"zone {z['id']} source must be cpu or disk")
+        if z.get("curve") not in names:
+            raise ValueError(f"zone {z['id']} uses curve '{z.get('curve')}', which doesn't exist")
         f = z.get("floor")
         if f:
-            if f.get("source") not in SOURCES:
-                raise ValueError(f"zone {z['id']} floor source must be cpu or disk")
+            if not isinstance(f.get("sensor"), str) or not f["sensor"]:
+                raise ValueError(f"zone {z['id']} floor needs a sensor")
             _num(f["above"], f"zone {z['id']} floor.above", 0, 120)
             _num(f["pwm"], f"zone {z['id']} floor.pwm", 0, 255)
     _num(cfg["web"]["port"], "web.port", 1, 65535)
@@ -189,8 +242,15 @@ class ConfigManager:
         if os.path.exists(self.path):
             with open(self.path) as f:
                 user = json.load(f)
+        migrated = migrate_config(user)
         cfg = deep_merge(DEFAULT_CONFIG, user)
         validate_config(cfg)
+        if migrated:
+            try:
+                self._write(cfg)             # previous file kept as config.json.bak
+                log.info("upgraded %s to named curves (old version saved as .bak)", self.path)
+            except OSError as e:
+                log.warning("could not save upgraded config: %s", e)
         if not os.path.exists(self.path):
             try:
                 self._write(cfg)
@@ -219,6 +279,7 @@ class ConfigManager:
             return copy.deepcopy(self.cfg)
 
     def update(self, new_cfg):
+        migrate_config(new_cfg)
         merged = deep_merge(DEFAULT_CONFIG, new_cfg)
         validate_config(merged)
         with self.lock:
@@ -377,40 +438,107 @@ def run(cmd, timeout=10):
         return None, ""
 
 
+def _sane(t):
+    """Unconnected hwmon inputs often read 0, 127 or -128 °C."""
+    return t is not None and 0 < t < 125
+
+
+def _nat_key(s):
+    return [int(x) if x.isdigit() else x for x in re.split(r"(\d+)", s)]
+
+
+GROUP_ORDER = ["Combined", "CPU", "Disks", "NVMe", "GPU", "Board"]
+
+
 class Sensors:
+    HWMON = "/sys/class/hwmon"
+    CPU_DRIVERS = ("coretemp", "k10temp", "zenpower")
+    GPU_DRIVERS = ("amdgpu", "radeon", "nouveau")
+
     def __init__(self):
         self._cpu_path = None
         self._cpu_label = None
         self._models = {}
+        self._serials = {}
+        self._hwmon = []
+        self._hwmon_scanned = 0.0
 
-    # ── CPU ───────────────────────────────────────────────────────
-    def _find_cpu_hwmon(self):
-        base = "/sys/class/hwmon"
-        prefer = {"coretemp": ("Package id 0",), "k10temp": ("Tctl", "Tdie"), "zenpower": ("Tdie", "Tctl")}
+    @staticmethod
+    def _read(path):
         try:
-            hwmons = sorted(os.listdir(base))
+            with open(path) as f:
+                return f.read().strip()
         except OSError:
-            return None, None
+            return None
+
+    # ── hwmon discovery: every kernel temperature sensor ──────────
+    def _scan_hwmon(self):
+        found, seen = [], {}
+        try:
+            hwmons = sorted(os.listdir(self.HWMON), key=_nat_key)
+        except OSError:
+            return found
         for h in hwmons:
-            d = os.path.join(base, h)
+            d = os.path.join(self.HWMON, h)
+            driver = self._read(os.path.join(d, "name"))
+            if not driver:
+                continue
+            # The parent device (PCI address, nvme0, coretemp.0 …) is stable across
+            # reboots, unlike the hwmonN number.
+            dev_link = os.path.join(d, "device")
+            device = os.path.basename(os.path.realpath(dev_link)) if os.path.exists(dev_link) else ""
+            model = ""
+            if driver == "nvme" and device:
+                model = self._read(f"/sys/class/nvme/{device}/model") or ""
             try:
-                with open(os.path.join(d, "name")) as f:
-                    name = f.read().strip()
+                inputs = sorted((x for x in os.listdir(d) if re.match(r"temp\d+_input$", x)), key=_nat_key)
             except OSError:
                 continue
-            if name not in prefer:
-                continue
-            inputs = sorted(x for x in os.listdir(d) if re.match(r"temp\d+_input$", x))
-            for want in prefer[name]:
-                for inp in inputs:
-                    try:
-                        with open(os.path.join(d, inp.replace("_input", "_label"))) as f:
-                            if f.read().strip() == want:
-                                return os.path.join(d, inp), f"{name}/{want}"
-                    except OSError:
-                        pass
-            if inputs:
-                return os.path.join(d, inputs[0]), f"{name}/{inputs[0]}"
+            for inp in inputs:
+                label = self._read(os.path.join(d, inp.replace("_input", "_label"))) or inp.split("_")[0]
+                sid = f"hwmon:{driver}:{device}:{label}"
+                seen[sid] = seen.get(sid, 0) + 1
+                if seen[sid] > 1:
+                    sid += f"#{seen[sid]}"
+                if driver in self.CPU_DRIVERS:
+                    group = "CPU"
+                elif driver == "nvme":
+                    group = "NVMe"
+                elif driver == "drivetemp":
+                    group = "Disks"
+                elif driver in self.GPU_DRIVERS:
+                    group = "GPU"
+                else:
+                    group = "Board"
+                who = f"{device} {model}".strip() if driver == "nvme" else driver
+                found.append({"id": sid, "path": os.path.join(d, inp), "driver": driver, "device": device,
+                              "label": label, "group": group, "name": f"{who} · {label}"})
+        return found
+
+    def read_hwmon(self):
+        if time.monotonic() - self._hwmon_scanned > 300 or not self._hwmon:
+            self._hwmon = self._scan_hwmon()
+            self._hwmon_scanned = time.monotonic()
+        out = []
+        for s in self._hwmon:
+            raw = self._read(s["path"])
+            try:
+                t = int(raw) / 1000.0 if raw is not None else None
+            except ValueError:
+                t = None
+            if _sane(t):
+                out.append(dict(s, temp=round(t, 1)))
+        return out
+
+    # ── CPU package (the "cpu" sensor) ────────────────────────────
+    def _find_cpu_hwmon(self):
+        prefer = {"coretemp": ("Package id 0",), "k10temp": ("Tctl", "Tdie"), "zenpower": ("Tdie", "Tctl")}
+        candidates = [s for s in (self._hwmon or self._scan_hwmon()) if s["driver"] in prefer]
+        for s in candidates:
+            if s["label"] in prefer[s["driver"]]:
+                return s["path"], f"{s['driver']} {s['label']}"
+        if candidates:
+            return candidates[0]["path"], f"{candidates[0]['driver']} {candidates[0]['label']}"
         return None, None
 
     def cpu_temp(self, setting):
@@ -419,11 +547,12 @@ class Sensors:
         elif self._cpu_path is None:
             self._cpu_path, self._cpu_label = self._find_cpu_hwmon()
         if self._cpu_path:
+            raw = self._read(self._cpu_path)
             try:
-                with open(self._cpu_path) as f:
-                    return int(f.read().strip()) / 1000.0
-            except (OSError, ValueError):
-                self._cpu_path = None if setting == "auto" else self._cpu_path
+                return int(raw) / 1000.0
+            except (TypeError, ValueError):
+                if setting == "auto":
+                    self._cpu_path = None
         # fallback: lm-sensors
         rc, out = run(["sensors"])
         m = re.search(r"Package id 0:\s*\+?([\d.]+)", out) or re.search(r"Tctl:\s*\+?([\d.]+)", out)
@@ -436,19 +565,15 @@ class Sensors:
     def cpu_label(self):
         return self._cpu_label
 
-    # ── Disks ─────────────────────────────────────────────────────
+    # ── SATA/SAS disks via smartctl ───────────────────────────────
     @staticmethod
     def list_disks(cfg_sensors):
         if cfg_sensors["disks"] != "auto":
             return list(cfg_sensors["disks"])
-        out = []
         try:
-            for n in sorted(os.listdir("/dev")):
-                if re.match(r"^sd[a-z]+$", n) or (cfg_sensors["include_nvme"] and re.match(r"^nvme\d+n\d+$", n)):
-                    out.append("/dev/" + n)
+            return ["/dev/" + n for n in sorted(os.listdir("/dev")) if re.match(r"^sd[a-z]+$", n)]
         except OSError:
-            pass
-        return out
+            return []
 
     def disk_temp(self, dev, skip_standby):
         cmd = ["smartctl", "-A", "-i", "-j"]
@@ -464,6 +589,7 @@ class Sensors:
         if j is not None:
             if dev not in self._models:
                 self._models[dev] = j.get("model_name") or j.get("scsi_model_name") or ""
+                self._serials[dev] = j.get("serial_number") or ""
             standby = bool(j.get("power_mode", {}).get("is_in_standby")) or \
                 any("STANDBY" in m.get("string", "").upper() for m in j.get("smartctl", {}).get("messages", []))
             t = j.get("temperature", {}).get("current")
@@ -487,22 +613,34 @@ class Sensors:
     def model(self, dev):
         return self._models.get(dev, "")
 
-    # ── ZFS ───────────────────────────────────────────────────────
+    def serial(self, dev):
+        return self._serials.get(dev, "")
+
+    # ── ZFS: scrub/resilver activity and pool → disk membership ───
     @staticmethod
-    def zfs_activity(detect_resilver):
-        rc, out = run(["zpool", "status"])
-        pools, pool = [], None
+    def zpool_info(detect_resilver):
+        """Returns (activity, members). members maps pool → {"sda", "nvme0", …}."""
+        rc, out = run(["zpool", "status", "-LP"])
+        activity, members, pool = [], {}, None
         for line in out.splitlines():
             m = re.match(r"\s*pool:\s*(\S+)", line)
             if m:
                 pool = m.group(1)
+                members.setdefault(pool, set())
+                continue
             if "scrub in progress" in line or (detect_resilver and "resilver in progress" in line):
-                pools.append({"pool": pool, "kind": "resilver" if "resilver" in line else "scrub"})
-        return pools
+                activity.append({"pool": pool, "kind": "resilver" if "resilver" in line else "scrub"})
+            m = re.search(r"/dev/(\S+)", line)
+            if m and pool:
+                name = os.path.basename(m.group(1))
+                b = re.match(r"(nvme\d+)n\d+", name) or re.match(r"(sd[a-z]+)", name)
+                if b:
+                    members[pool].add(b.group(1))
+        return activity, {p: d for p, d in members.items() if d}
 
 
 class SimSensors(Sensors):
-    """Plausible fake temps that react to fan PWM, for --simulate."""
+    """Plausible fake sensors that react to fan PWM, for --simulate."""
 
     def __init__(self, controller_ref):
         super().__init__()
@@ -510,8 +648,10 @@ class SimSensors(Sensors):
         self.t0 = time.time()
         self.disk_base = {"/dev/sda": 33.0, "/dev/sdb": 35.0, "/dev/sdc": 34.0, "/dev/sdd": 36.5}
         self._models = {d: "SIM WD80EFZZ" for d in self.disk_base}
-        self._cpu_label = "simulated"
+        self._serials = {d: f"SIMSERIAL{i}" for i, d in enumerate(self.disk_base)}
+        self._cpu_label = "coretemp Package id 0"
         self.scrub_until = 0
+        self._last_cpu = 45.0
 
     def _pwm(self, zid):
         return self.ref.sent.get(zid, 50) if self.ref else 50
@@ -520,7 +660,23 @@ class SimSensors(Sensors):
         t = time.time() - self.t0
         load = 45 + 18 * math.sin(t / 90) + 8 * math.sin(t / 13)
         cooling = (self._pwm(2) + self._pwm(3)) / 510 * 12
-        return round(load - cooling + random.uniform(-1.5, 1.5), 1)
+        self._last_cpu = round(load - cooling + random.uniform(-1.5, 1.5), 1)
+        return self._last_cpu
+
+    def read_hwmon(self):
+        c = self._last_cpu
+        t = time.time() - self.t0
+        def s(driver, device, label, group, name, temp):
+            return {"id": f"hwmon:{driver}:{device}:{label}", "driver": driver, "device": device, "label": label,
+                    "group": group, "name": name, "temp": round(temp, 1)}
+        out = [s("coretemp", "coretemp.0", "Package id 0", "CPU", "coretemp · Package id 0", c)]
+        out += [s("coretemp", "coretemp.0", f"Core {i}", "CPU", f"coretemp · Core {i}", c - 2 + random.uniform(-2, 2))
+                for i in range(4)]
+        out.append(s("nvme", "nvme0", "Composite", "NVMe", "nvme0 SIM 980 PRO · Composite",
+                     41 + 3 * math.sin(t / 200) - self._pwm(1) / 255 * 3))
+        out.append(s("nct6775", "nct6775.656", "SYSTIN", "Board", "nct6775 · SYSTIN", 31 + math.sin(t / 400)))
+        out.append(s("acpitz", "LNXTHERM:00", "temp1", "Board", "acpitz · temp1", 27.8))
+        return out
 
     @staticmethod
     def list_disks(cfg_sensors):
@@ -532,13 +688,13 @@ class SimSensors(Sensors):
         scrub = 6 if time.time() < self.scrub_until else 0
         return round(self.disk_base[dev] + 4 * math.sin(t / 300) + scrub - cooling + random.uniform(-0.3, 0.3), 1), False
 
-    def zfs_activity(self, detect_resilver):
-        # a fake scrub for 3 minutes every 15 minutes
+    def zpool_info(self, detect_resilver):
+        members = {"tank": {"sda", "sdb", "sdc", "sdd"}, "rpool": {"nvme0"}}
         t = time.time() - self.t0
-        if 300 < (t % 900) < 480:
+        if 300 < (t % 900) < 480:        # a fake 3-minute scrub every 15 minutes
             self.scrub_until = time.time() + 60
-            return [{"pool": "tank", "kind": "scrub"}]
-        return []
+            return [{"pool": "tank", "kind": "scrub"}], members
+        return [], members
 
 
 # ════════════════════════════════════════════════════════════════════
@@ -584,8 +740,8 @@ class Controller:
         self._next_connect = 0.0
         self._reconnect_requested = False
 
-        self.avg = {s: deque() for s in SOURCES}
-        self.raw = {s: None for s in SOURCES}
+        self.avg = {}                  # sensor id -> deque of recent readings
+        self.readings = {}             # sensor id -> latest reading dict
         self.disks = {}
         self._last_disk_poll = 0.0
         self.zone_state = {1: ZoneState(), 2: ZoneState(), 3: ZoneState()}
@@ -717,16 +873,35 @@ class Controller:
                     self.rpm[int(a)] = int(b)
 
     # ── one control cycle ─────────────────────────────────────────
-    def _avg(self, src, value, n):
-        q = self.avg[src]
-        if value is not None:
-            q.append(value)
+    def _avg(self, sid, value, n):
+        q = self.avg.setdefault(sid, deque())
+        if value is None:
+            q.clear()                  # sensor gone: report None, don't hide it behind stale values
+            return None
+        q.append(value)
         while len(q) > n:
             q.popleft()
-        return round(sum(q) / len(q), 1) if q else None
+        return round(sum(q) / len(q), 1)
 
     def _read_sensors(self, cfg):
-        cpu_raw = self.sensors.cpu_temp(cfg["sensors"]["cpu"])
+        """Read everything. Returns (readings by id, zfs activity)."""
+        r = {}
+
+        def add(sid, name, group, temp, **extra):
+            r[sid] = dict(extra, id=sid, name=name, group=group, temp=temp)
+
+        cpu = self.sensors.cpu_temp(cfg["sensors"]["cpu"])
+        add("cpu", "CPU", "Combined", cpu, detail=self.sensors.cpu_label)
+
+        nvme = {}                      # nvme0 -> [(label, temp), …]
+        for s in self.sensors.read_hwmon():
+            add(s["id"], s["name"], s["group"], s["temp"])
+            if s["driver"] == "nvme" and s["device"]:
+                nvme.setdefault(s["device"], []).append((s["label"], s["temp"]))
+        # one temp per NVMe drive: its "Composite" reading, else its hottest sensor
+        nvme_by_ctrl = {d: next((t for lab, t in v if lab == "Composite"), max(t for _, t in v))
+                        for d, v in nvme.items()}
+
         now = time.monotonic()
         if now - self._last_disk_poll >= cfg["interval"] - 0.5 or not self.disks:
             self._last_disk_poll = now
@@ -738,11 +913,28 @@ class Controller:
                 if t is None and not standby:
                     continue
                 found[name] = {"name": name, "dev": dev, "temp": t, "standby": standby,
-                               "model": self.sensors.model(dev), "used": name not in excl and t is not None}
+                               "model": self.sensors.model(dev), "serial": self.sensors.serial(dev),
+                               "used": name not in excl and t is not None}
             self.disks = found
-        temps = [d["temp"] for d in self.disks.values() if d["used"]]
-        disk_raw = max(temps) if temps else None
-        return cpu_raw, disk_raw
+        for d in self.disks.values():
+            # disks are identified by serial so a changed sdX letter doesn't move a curve
+            add("disk:" + (d["serial"] or d["name"]), f"{d['name']} · {d['model']}".strip(" ·"), "Disks",
+                d["temp"], standby=d["standby"])
+
+        used = {n: d["temp"] for n, d in self.disks.items() if d["used"]}
+        if used:
+            add("disks_max", "Disks (max)", "Combined", max(used.values()))
+        else:
+            add("disks_max", "Disks (max)", "Combined", None)
+        if nvme_by_ctrl:
+            add("nvme_max", "NVMe (max)", "Combined", max(nvme_by_ctrl.values()))
+
+        zfs, members = self.sensors.zpool_info(cfg["sensors"]["detect_resilver"])
+        for pool, devs in sorted(members.items()):
+            temps = [used[d] for d in devs if d in used] + [nvme_by_ctrl[d] for d in devs if d in nvme_by_ctrl]
+            if temps:
+                add(f"pool:{pool}", f"Pool {pool} (max)", "Combined", max(temps))
+        return r, zfs
 
     def _select_profile(self, cfg, zfs):
         if zfs:
@@ -772,12 +964,20 @@ class Controller:
         H = cfg["hysteresis"]
         n = cfg["temp_avg_samples"]
 
-        cpu_raw, disk_raw = self._read_sensors(cfg)
-        zfs = self.sensors.zfs_activity(cfg["sensors"]["detect_resilver"])
+        readings, zfs = self._read_sensors(cfg)
+        cpu_raw = readings["cpu"]["temp"]
+        disk_raw = readings["disks_max"]["temp"]
 
         with self.lock:
-            self.raw = {"cpu": cpu_raw, "disk": disk_raw}
-            avg = {"cpu": self._avg("cpu", cpu_raw, n), "disk": self._avg("disk", disk_raw, n)}
+            self.readings = readings
+            # average every sensor that exists now, plus any a curve/floor refers to
+            wanted = set(readings) | {c["sensor"] for c in cfg["curves"]} | \
+                {z["floor"]["sensor"] for z in cfg["zones"] if z.get("floor")}
+            avg = {sid: self._avg(sid, readings.get(sid, {}).get("temp"), n) for sid in wanted}
+            for sid in list(self.avg):
+                if sid not in wanted:
+                    del self.avg[sid]
+            curves = {c["name"]: c for c in cfg["curves"]}
             profile, auto_profile = self._select_profile(cfg, zfs)
 
             em = cfg["emergency"]
@@ -798,8 +998,10 @@ class Controller:
             for z in cfg["zones"]:
                 zid = z["id"]
                 zs = self.zone_state[zid]
-                t = avg[z["source"]]
-                curve = cfg["curves"][profile][z["source"]]
+                c = curves[z["curve"]]
+                sensor = c["sensor"]
+                t = avg.get(sensor)
+                curve = curve_points(c, profile)
                 mode = "auto"
                 curve_pwm = None
                 if t is None:
@@ -819,7 +1021,7 @@ class Controller:
 
                 f = z.get("floor")
                 if f:
-                    ft = avg[f["source"]]
+                    ft = avg.get(f["sensor"])
                     if ft is not None:
                         if zs.floor_active:
                             zs.floor_active = not (ft <= f["above"] - H)
@@ -838,7 +1040,8 @@ class Controller:
                 pwm = int(max(0, min(255, pwm)))
                 want[zid] = pwm
                 zones_out.append({
-                    "id": zid, "name": z["name"], "source": z["source"], "temp": t,
+                    "id": zid, "name": z["name"], "curve": c["name"], "sensor": sensor,
+                    "sensor_name": readings.get(sensor, {}).get("name", sensor), "temp": t,
                     "pwm": pwm, "percent": round(pwm / 2.55), "curve_pwm": curve_pwm,
                     "hyst_pwm": zs.pwm, "peak": zs.peak, "floor_active": zs.floor_active,
                     "mode": mode, "override": ov,
@@ -852,6 +1055,19 @@ class Controller:
                 zo["rpm"] = self.rpm.get(zo["id"]) if self.arduino_info["tach"] else None
                 zo["applied"] = self.sent.get(zo["id"])
 
+            used_by = {}
+            for c in cfg["curves"]:
+                used_by.setdefault(c["sensor"], []).append(f"curve {c['name']}")
+            for z in cfg["zones"]:
+                if z.get("floor"):
+                    used_by.setdefault(z["floor"]["sensor"], []).append(f"Z{z['id']} floor")
+            sensors_out = [dict(s, avg=avg.get(sid), used_by=used_by.get(sid, []))
+                           for sid, s in readings.items()]
+            # sensors a curve/floor refers to that aren't present right now
+            sensors_out += [{"id": sid, "name": sid, "group": "Missing", "temp": None, "avg": None,
+                             "used_by": who} for sid, who in used_by.items() if sid not in readings]
+            sensors_out.sort(key=lambda s: (GROUP_ORDER.index(s["group"]) if s["group"] in GROUP_ORDER
+                                            else len(GROUP_ORDER), _nat_key(s["name"])))
             self.status = {
                 "version": VERSION,
                 "host": "pve-demo" if self.simulate else socket.gethostname(),
@@ -860,10 +1076,11 @@ class Controller:
                 "interval": cfg["interval"],
                 "arduino": dict(self.arduino_info),
                 "temps": {
-                    "cpu": {"raw": cpu_raw, "avg": avg["cpu"], "sensor": self.sensors.cpu_label},
-                    "disk": {"raw": disk_raw, "avg": avg["disk"]},
+                    "cpu": {"raw": cpu_raw, "avg": avg.get("cpu"), "sensor": self.sensors.cpu_label},
+                    "disk": {"raw": disk_raw, "avg": avg.get("disks_max")},
                     "disks": sorted(self.disks.values(), key=lambda d: d["name"]),
                 },
+                "sensors": sensors_out,
                 "profile": {"active": profile, "auto": auto_profile, "mode": cfg["profile"]["mode"],
                             "zfs": zfs, "cooldown": self.cooldown, "load": os.getloadavg()[0] if hasattr(os, "getloadavg") else None},
                 "emergency": emergency,
@@ -982,16 +1199,15 @@ def metrics_text(st):
         for labels, v in samples:
             if v is None:
                 continue
-            lab = ",".join(f'{k}="{v2}"' for k, v2 in labels.items())
+            esc = lambda x: str(x).replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+            lab = ",".join(f'{k}="{esc(v2)}"' for k, v2 in labels.items())
             lines.append(f"{name}{{{lab}}} {v}" if lab else f"{name} {v}")
 
-    t = st.get("temps", {})
-    g("fancontrol_temp_celsius", "Temperature", [
-        ({"sensor": "cpu", "kind": "raw"}, t.get("cpu", {}).get("raw")),
-        ({"sensor": "cpu", "kind": "avg"}, t.get("cpu", {}).get("avg")),
-        ({"sensor": "disk_max", "kind": "raw"}, t.get("disk", {}).get("raw")),
-        ({"sensor": "disk_max", "kind": "avg"}, t.get("disk", {}).get("avg")),
-    ] + [({"sensor": d["name"], "kind": "raw"}, d["temp"]) for d in t.get("disks", [])])
+    sensors = st.get("sensors", [])
+    g("fancontrol_temp_celsius", "Temperature (raw reading)",
+      [({"sensor": s["id"], "name": s["name"], "group": s["group"]}, s["temp"]) for s in sensors])
+    g("fancontrol_temp_avg_celsius", "Temperature (rolling average used for control)",
+      [({"sensor": s["id"], "name": s["name"], "group": s["group"]}, s.get("avg")) for s in sensors])
     g("fancontrol_zone_pwm", "Zone PWM 0-255", [({"zone": str(z["id"]), "name": z["name"]}, z["pwm"]) for z in st.get("zones", [])])
     g("fancontrol_zone_rpm", "Zone tach RPM", [({"zone": str(z["id"]), "name": z["name"]}, z.get("rpm")) for z in st.get("zones", [])])
     g("fancontrol_arduino_connected", "Arduino link up", [({}, int(st.get("arduino", {}).get("connected", False)))])

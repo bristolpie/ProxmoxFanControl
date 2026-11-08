@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fan Control</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='11' fill='%232f7de1'/%3E%3Cpath d='M12 12c0-4 1-7 4-7s2 4-4 7zm0 0c4 0 7 1 7 4s-4 2-7-4zm0 0c0 4-1 7-4 7s-2-4 4-7zm0 0c-4 0-7-1-7-4s4-2 7 4z' fill='white'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f4f6f9; --panel: #ffffff; --panel-2: #f0f2f6; --line: #dfe3ea; --text: #18202b;
+  --muted: #5d6878; --accent: #2f7de1; --accent-ink: #fff;
+  --ok: #1f9d55; --warn: #c98a00; --bad: #d64545; --manual: #8b5cf6;
+  --s-cpu: #e8590c; --s-disk: #1c7ed6; --s-z1: #2f9e44; --s-z2: #ae3ec9; --s-z3: #f08c00;
+  --grid: #e7eaf0; --scrub: rgba(28,126,214,.08);
+  --radius: 10px; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1318; --panel: #171c23; --panel-2: #1e252e; --line: #2a323d; --text: #e6eaf0;
+    --muted: #93a0b2; --accent: #4c94f0; --grid: #232a34; --scrub: rgba(76,148,240,.10);
+    --shadow: none; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1318; --panel: #171c23; --panel-2: #1e252e; --line: #2a323d; --text: #e6eaf0;
+  --muted: #93a0b2; --accent: #4c94f0; --grid: #232a34; --scrub: rgba(76,148,240,.10);
+  --shadow: none; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.num { font-variant-numeric: tabular-nums; }
+header { position: sticky; top: 0; z-index: 10; background: var(--panel); border-bottom: 1px solid var(--line); }
+.bar { max-width: 1280px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.brand { font-weight: 650; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.brand small { color: var(--muted); font-weight: 400; }
+.spacer { flex: 1; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+  background: var(--panel-2); border: 1px solid var(--line); font-size: 12.5px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.dot.ok { background: var(--ok); } .dot.bad { background: var(--bad); } .dot.warn { background: var(--warn); }
+nav { max-width: 1280px; margin: 0 auto; padding: 0 16px; display: flex; gap: 4px; }
+nav button { background: none; border: none; color: var(--muted); padding: 8px 12px; cursor: pointer;
+  font: inherit; border-bottom: 2px solid transparent; }
+nav button.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+main { max-width: 1280px; margin: 0 auto; padding: 16px; }
+.banner { background: var(--bad); color: #fff; padding: 10px 14px; border-radius: var(--radius); margin-bottom: 14px; font-weight: 600; }
+.banner.warn { background: var(--warn); }
+.grid { display: grid; gap: 14px; }
+.g-temps { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.g-zones { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); min-width: 0; }
+.card h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em;
+  display: flex; align-items: center; gap: 8px; }
+.big { font-size: 34px; font-weight: 650; line-height: 1.1; }
+.big small { font-size: 15px; color: var(--muted); font-weight: 500; }
+.sub { color: var(--muted); font-size: 12.5px; }
+.section-title { margin: 22px 0 10px; font-size: 15px; font-weight: 650; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.meter { height: 8px; background: var(--panel-2); border-radius: 99px; overflow: hidden; margin: 10px 0 6px; }
+.meter > div { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
+.chip { font-size: 11.5px; padding: 1px 8px; border-radius: 99px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); font-weight: 600; text-transform: none; letter-spacing: 0; }
+.chip.auto { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.chip.floor { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+.chip.manual { color: var(--manual); border-color: color-mix(in srgb, var(--manual) 40%, transparent); }
+.chip.emergency, .chip.sensor-fail { color: #fff; background: var(--bad); border-color: var(--bad); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12.5px; margin-top: 8px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; text-align: right; }
+button.btn, select, input[type=number], input[type=text], input[type=password] {
+  font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 5px 10px; }
+input[type=number] { width: 80px; }
+button.btn { cursor: pointer; background: var(--panel-2); }
+button.btn:hover { border-color: var(--accent); }
+button.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.btn.danger { color: var(--bad); }
+button.btn:disabled { opacity: .5; cursor: default; }
+input[type=range] { width: 100%; accent-color: var(--manual); }
+.manual-box { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 600; font-size: 12px; }
+td.r, th.r { text-align: right; }
+.chart-wrap { position: relative; }
+svg.chart { width: 100%; display: block; overflow: visible; touch-action: none; user-select: none; }
+svg.chart text { fill: var(--muted); font-size: 11px; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 12px; height: 3px; border-radius: 2px; background: var(--c); margin-right: 6px; vertical-align: middle; }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.15); white-space: nowrap; display: none; z-index: 5; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: none; background: var(--panel); color: var(--muted); padding: 5px 11px; cursor: pointer; font: inherit; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button.on { background: var(--accent); color: var(--accent-ink); }
+.editor-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; }
+@media (max-width: 860px) { .editor-grid { grid-template-columns: 1fr; } }
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.field label { font-weight: 600; font-size: 13px; }
+.field .help { color: var(--muted); font-size: 12px; }
+.field input[type=number], .field input[type=text], .field input[type=password], .field select { width: 100%; }
+.check { display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 13px; }
+.savebar { position: sticky; bottom: 0; background: var(--panel); border-top: 1px solid var(--line); padding: 10px 16px; margin: 16px -16px -16px;
+  display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
+.msg { color: var(--muted); font-size: 13px; margin-right: auto; }
+.msg.err { color: var(--bad); } .msg.ok { color: var(--ok); }
+.hidden { display: none !important; }
+.handle { cursor: grab; }
+.handle:active { cursor: grabbing; }
+@media (max-width: 560px) { .big { font-size: 28px; } .bar { gap: 8px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">Fan Control <small id="host"></small></div>
+    <span class="pill" id="p-arduino"><span class="dot"></span><span>Arduino</span></span>
+    <span class="pill" id="p-profile"><span class="dot"></span><span>Profile</span></span>
+    <div class="spacer"></div>
+    <span class="row" style="gap:6px"><label class="sub" for="profile-mode">Profile</label>
+    <select id="profile-mode" title="Profile mode">
+      <option value="auto">Auto</option><option value="idle">Idle</option>
+      <option value="normal">Normal</option><option value="scrub">Scrub</option>
+    </select></span>
+    <button class="btn" id="boost" title="All zones 100% for 10 minutes">Boost 10 min</button>
+    <button class="btn" id="theme" title="Toggle theme" aria-label="Toggle theme">◐</button>
+  </div>
+  <nav>
+    <button data-tab="dash" class="active">Dashboard</button>
+    <button data-tab="curves">Curves</button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+</header>
+
+<main>
+  <div id="banners"></div>
+
+  <!-- ═══════════ DASHBOARD ═══════════ -->
+  <section id="tab-dash">
+    <div class="grid g-temps">
+      <div class="card"><h3>CPU</h3><div class="big num" id="t-cpu">–</div><div class="sub num" id="t-cpu-sub"></div></div>
+      <div class="card"><h3>Disks (max)</h3><div class="big num" id="t-disk">–</div><div class="sub num" id="t-disk-sub"></div></div>
+      <div class="card"><h3>ZFS</h3><div class="big" id="t-zfs" style="font-size:22px">–</div><div class="sub" id="t-zfs-sub"></div></div>
+    </div>
+
+    <div class="section-title">Zones <span class="sub" id="cycle"></span></div>
+    <div class="grid g-zones" id="zones"></div>
+
+    <div class="section-title">History
+      <div class="seg" id="range">
+        <button data-m="15">15m</button><button data-m="60" class="on">1h</button>
+        <button data-m="360">6h</button><button data-m="1440">24h</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="legend" id="lg-temp"></div>
+      <div class="chart-wrap"><svg class="chart" id="ch-temp"></svg><div class="tip"></div></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="row" style="justify-content:space-between">
+        <div class="legend" id="lg-pwm"></div>
+        <div class="seg" id="pwm-mode"><button data-v="pwm" class="on">PWM %</button><button data-v="rpm">RPM</button></div>
+      </div>
+      <div class="chart-wrap"><svg class="chart" id="ch-pwm"></svg><div class="tip"></div></div>
+    </div>
+
+    <div class="section-title">Disks</div>
+    <div class="card" style="overflow-x:auto">
+      <table><thead><tr><th>Disk</th><th>Model</th><th class="r">Temp</th><th>Used for control</th></tr></thead>
+      <tbody id="disks"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ═══════════ CURVES ═══════════ -->
+  <section id="tab-curves" class="hidden">
+    <div class="row" style="margin-bottom:12px">
+      <div class="seg" id="c-profile"><button data-v="idle">Idle</button><button data-v="normal" class="on">Normal</button><button data-v="scrub">Scrub</button></div>
+      <div class="seg" id="c-source"><button data-v="cpu" class="on">CPU curve</button><button data-v="disk">Disk curve</button></div>
+      <span class="sub" id="c-uses"></span>
+    </div>
+    <div class="editor-grid">
+      <div class="card">
+        <div class="legend" id="lg-curve"></div>
+        <div class="chart-wrap"><svg class="chart" id="ch-curve"></svg><div class="tip"></div></div>
+        <div class="sub" style="margin-top:6px">Drag points to adjust. Double-click empty space to add a point. Select a point and press Delete to remove it.</div>
+      </div>
+      <div class="card">
+        <h3>Points</h3>
+        <table><thead><tr><th>°C</th><th>PWM</th><th class="r">%</th><th></th></tr></thead><tbody id="c-points"></tbody></table>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="c-add">Add point</button>
+          <select id="c-copy"><option value="">Copy from…</option></select>
+        </div>
+        <div class="kv" id="c-info"></div>
+      </div>
+    </div>
+    <div class="savebar">
+      <span class="msg" id="c-msg"></span>
+      <button class="btn" id="c-defaults">Load defaults</button>
+      <button class="btn" id="c-revert">Revert</button>
+      <button class="btn primary" id="c-save">Save curves</button>
+    </div>
+  </section>
+
+  <!-- ═══════════ SETTINGS ═══════════ -->
+  <section id="tab-settings" class="hidden">
+    <div class="form" id="s-form"></div>
+    <div class="section-title">Zones</div>
+    <div class="card" style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Zone</th><th>Name</th><th>Follows</th><th>Floor from</th><th>Floor when above °C</th><th>Floor PWM</th></tr></thead>
+        <tbody id="s-zones"></tbody>
+      </table>
+    </div>
+    <div class="savebar">
+      <span class="msg" id="s-msg"></span>
+      <button class="btn" id="s-reconnect">Reconnect Arduino</button>
+      <button class="btn" id="s-revert">Revert</button>
+      <button class="btn primary" id="s-save">Save settings</button>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const pct = (pwm) => Math.round(pwm / 2.55);
+const fmtT = (v) => v == null ? "–" : (Math.round(v * 10) / 10).toFixed(1);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const clock = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+// ── theme ────────────────────────────────────────────────────────
+try { const t = localStorage.getItem("fc-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+$("#theme").onclick = () => {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+  const next = cur === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("fc-theme", next); } catch (e) {}
+  redrawAll();
+};
+
+// ── API ──────────────────────────────────────────────────────────
+let token = ""; try { token = localStorage.getItem("fc-token") || ""; } catch (e) {}
+async function api(path, method = "GET", body) {
+  const opt = { method, headers: {} };
+  if (body !== undefined) { opt.body = JSON.stringify(body); opt.headers["Content-Type"] = "application/json"; }
+  if (token) opt.headers["X-Auth-Token"] = token;
+  let r = await fetch(path, opt);
+  if (r.status === 401) {
+    const t = prompt("This fan controller requires an access token (web.token in config.json):");
+    if (!t) throw new Error("token required");
+    token = t; try { localStorage.setItem("fc-token", t); } catch (e) {}
+    opt.headers["X-Auth-Token"] = t;
+    r = await fetch(path, opt);
+  }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+
+// ── tabs ─────────────────────────────────────────────────────────
+let tab = "dash";
+function showTab(name) { const b = $(`nav button[data-tab="${name}"]`); if (b) b.click(); }
+$$("nav button").forEach(b => b.onclick = () => {
+  tab = b.dataset.tab;
+  window.history.replaceState(null, "", tab === "dash" ? location.pathname : "#" + tab);
+  $$("nav button").forEach(x => x.classList.toggle("active", x === b));
+  $$("main > section").forEach(s => s.classList.toggle("hidden", s.id !== "tab-" + tab));
+  if (tab === "curves") drawCurve();
+  if (tab === "dash") drawHistory();
+});
+
+// ════════════════════════════════════════════════════════════════
+// Generic SVG chart
+// ════════════════════════════════════════════════════════════════
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function niceTicks(lo, hi, n = 5) {
+  const span = hi - lo || 1, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => span / s <= n) || mag * 10;
+  const out = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(6));
+  return out;
+}
+
+/* timeChart: series = [{name, color, values:[{t,v}]}], bands = [{t0,t1}] */
+function timeChart(svg, { series, bands = [], yUnit = "", yMin, yMax, height = 220, fmt = v => v }) {
+  const W = svg.clientWidth || 600, H = height, m = { l: 42, r: 12, t: 10, b: 24 };
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("height", H); svg.innerHTML = "";
+  const all = series.flatMap(s => s.values.filter(p => p.v != null));
+  if (!all.length) { el("text", { x: W / 2, y: H / 2, "text-anchor": "middle" }, svg).textContent = "No data yet"; return; }
+  const t0 = Math.min(...all.map(p => p.t)), t1 = Math.max(...all.map(p => p.t));
+  let lo = yMin ?? Math.floor(Math.min(...all.map(p => p.v)) - 2), hi = yMax ?? Math.ceil(Math.max(...all.map(p => p.v)) + 2);
+  const ticks = niceTicks(lo, hi); lo = Math.min(lo, ticks[0]); hi = Math.max(hi, ticks[ticks.length - 1]);
+  const x = t => m.l + (W - m.l - m.r) * (t1 === t0 ? 0.5 : (t - t0) / (t1 - t0));
+  const y = v => m.t + (H - m.t - m.b) * (1 - (v - lo) / (hi - lo));
+  for (const b of bands) el("rect", { x: x(Math.max(b.t0, t0)), y: m.t, width: Math.max(1, x(Math.min(b.t1, t1)) - x(Math.max(b.t0, t0))), height: H - m.t - m.b, fill: css("--scrub") }, svg);
+  for (const v of ticks) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: css("--grid") }, svg);
+    el("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, svg).textContent = v + yUnit;
+  }
+  const nx = Math.max(2, Math.floor((W - m.l - m.r) / 90));
+  for (let i = 0; i <= nx; i++) {
+    const t = t0 + (t1 - t0) * i / nx;
+    el("text", { x: x(t), y: H - 6, "text-anchor": i === 0 ? "start" : i === nx ? "end" : "middle" }, svg).textContent =
+      t1 - t0 < 900 ? new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : clock(t);
+  }
+  for (const s of series) {
+    let d = "", pen = false;
+    for (const p of s.values) {
+      if (p.v == null) { pen = false; continue; }
+      d += (pen ? "L" : "M") + x(p.t).toFixed(1) + "," + y(p.v).toFixed(1); pen = true;
+    }
+    el("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+  }
+  // hover
+  const cross = el("line", { y1: m.t, y2: H - m.b, stroke: css("--muted"), "stroke-dasharray": "3 3", visibility: "hidden" }, svg);
+  const dots = series.map(s => el("circle", { r: 4, fill: s.color, stroke: css("--panel"), "stroke-width": 2, visibility: "hidden" }, svg));
+  const hit = el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }, svg);
+  const tip = svg.parentNode.querySelector(".tip");
+  const ref = series.reduce((a, s) => s.values.length > a.length ? s.values : a, []);
+  hit.onpointermove = (ev) => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * W / r.width;
+    const t = t0 + (px - m.l) / (W - m.l - m.r) * (t1 - t0);
+    let best = 0; for (let i = 0; i < ref.length; i++) if (Math.abs(ref[i].t - t) < Math.abs(ref[best].t - t)) best = i;
+    const tt = ref[best].t;
+    cross.setAttribute("x1", x(tt)); cross.setAttribute("x2", x(tt)); cross.setAttribute("visibility", "visible");
+    let html = `<b>${new Date(tt * 1000).toLocaleTimeString()}</b>`;
+    series.forEach((s, i) => {
+      const p = s.values.find(q => q.t === tt);
+      if (p && p.v != null) { dots[i].setAttribute("cx", x(tt)); dots[i].setAttribute("cy", y(p.v)); dots[i].setAttribute("visibility", "visible"); html += `<br><span style="color:${s.color}">●</span> ${esc(s.name)}: <b class="num">${fmt(p.v)}</b>`; }
+      else dots[i].setAttribute("visibility", "hidden");
+    });
+    tip.innerHTML = html; tip.style.display = "block";
+    const left = x(tt) / W * r.width;
+    tip.style.left = Math.min(r.width - tip.offsetWidth - 4, Math.max(0, left + 12)) + "px"; tip.style.top = "8px";
+  };
+  hit.onpointerleave = () => { tip.style.display = "none"; cross.setAttribute("visibility", "hidden"); dots.forEach(d => d.setAttribute("visibility", "hidden")); };
+}
+
+function legend(node, items) {
+  node.innerHTML = items.map(i => `<span style="--c:${i.color}">${esc(i.name)}</span>`).join("");
+}
+
+// ════════════════════════════════════════════════════════════════
+// Dashboard
+// ════════════════════════════════════════════════════════════════
+let status = null, history = { rows: [] }, rangeMin = 60, pwmMode = "pwm";
+try { rangeMin = +localStorage.getItem("fc-range") || 60; } catch (e) {}
+$$("#range button").forEach(b => { b.classList.toggle("on", +b.dataset.m === rangeMin); b.onclick = () => {
+  rangeMin = +b.dataset.m; try { localStorage.setItem("fc-range", rangeMin); } catch (e) {}
+  $$("#range button").forEach(x => x.classList.toggle("on", x === b)); loadHistory();
+}; });
+$$("#pwm-mode button").forEach(b => b.onclick = () => {
+  pwmMode = b.dataset.v; $$("#pwm-mode button").forEach(x => x.classList.toggle("on", x === b)); drawHistory();
+});
+
+const zoneColor = id => css(["", "--s-z1", "--s-z2", "--s-z3"][id]);
+const MODE_LABEL = { auto: "Auto", floor: "Floor", manual: "Manual", emergency: "EMERGENCY", "sensor-fail": "Sensor fail" };
+let zoneDrafts = {};   // zid -> slider % while user is editing
+
+function renderStatus(st) {
+  const first = !status;
+  status = st;
+  if (first && tab === "dash") drawHistory();   // legend needs zone names
+  $("#host").textContent = st.host + (st.simulate ? " · simulation" : "");
+  document.title = `Fan Control · ${st.host}`;
+  const a = st.arduino;
+  $("#p-arduino").innerHTML = `<span class="dot ${a.connected ? "ok" : "bad"}"></span><span>${a.connected
+    ? `Arduino ${a.firmware ? "v" + a.firmware : "(basic firmware)"}${a.tach ? " · tach" : ""}${a.watchdog ? " · wd " + a.watchdog + "s" : ""}`
+    : "Arduino offline"}</span>`;
+  $("#p-arduino").title = a.connected ? a.port : (a.error || "");
+  const p = st.profile;
+  $("#p-profile").innerHTML = `<span class="dot ${p.active === "scrub" ? "warn" : "ok"}"></span><span>${p.active}${p.mode !== "auto" ? " (forced)" : ""}</span>`;
+  if (document.activeElement !== $("#profile-mode")) $("#profile-mode").value = p.mode;
+
+  // banners
+  let b = "";
+  if (st.emergency.length) b += `<div class="banner">Emergency cooling: ${st.emergency.map(esc).join(", ")} → all zones at ${pct(st.zones[0]?.pwm ?? 255)}%</div>`;
+  if (!a.connected) b += `<div class="banner warn">Arduino not connected (${esc(a.port || "")}: ${esc(a.error || "no reply")}). Fans hold their last value${a.watchdog ? " until the watchdog failsafe" : ""}.</div>`;
+  if (st.zones.some(z => z.mode === "sensor-fail")) b += `<div class="banner">A temperature sensor can't be read. Affected zones are running at the sensor-fail PWM.</div>`;
+  $("#banners").innerHTML = b;
+
+  const t = st.temps;
+  $("#t-cpu").innerHTML = `${fmtT(t.cpu.raw)}<small>°C</small>`;
+  $("#t-cpu-sub").textContent = `avg ${fmtT(t.cpu.avg)}°C · ${t.cpu.sensor || "no sensor"}${p.load != null ? " · load " + p.load.toFixed(2) : ""}`;
+  $("#t-disk").innerHTML = `${fmtT(t.disk.raw)}<small>°C</small>`;
+  const used = t.disks.filter(d => d.used).length;
+  $("#t-disk-sub").textContent = `avg ${fmtT(t.disk.avg)}°C · ${used} disk${used === 1 ? "" : "s"} monitored`;
+  $("#t-zfs").textContent = p.zfs.length ? p.zfs.map(z => `${z.kind} on ${z.pool}`).join(", ") : (p.cooldown > 0 ? "Scrub cooldown" : "Idle");
+  $("#t-zfs-sub").textContent = p.zfs.length ? "Scrub profile active" : p.cooldown > 0 ? `${p.cooldown} cycle(s) left in scrub profile` : "No scrub or resilver running";
+  $("#cycle").textContent = `updated ${new Date(st.time * 1000).toLocaleTimeString()} · cycle ${st.cycle_ms} ms`;
+
+  // zones
+  const zc = $("#zones");
+  for (const z of st.zones) {
+    let card = $(`#zone-${z.id}`);
+    if (!card) {
+      card = document.createElement("div"); card.className = "card"; card.id = "zone-" + z.id;
+      card.innerHTML = `
+        <h3><span class="zname"></span> <span class="chip"></span></h3>
+        <div class="row" style="justify-content:space-between;align-items:flex-end">
+          <div class="big num zpct"></div><div class="sub num zrpm" style="text-align:right"></div>
+        </div>
+        <div class="meter"><div></div></div>
+        <dl class="kv"></dl>
+        <div class="manual-box">
+          <div class="row" style="justify-content:space-between"><b style="font-size:13px">Manual</b><span class="num zslv sub"></span></div>
+          <input type="range" min="0" max="100" step="1">
+          <div class="row">
+            <select class="zhold"><option value="15">15 min</option><option value="60" selected>1 hour</option><option value="240">4 hours</option><option value="0">Until released</option></select>
+            <button class="btn zset">Hold</button>
+            <button class="btn zrel">Return to auto</button>
+          </div>
+        </div>`;
+      zc.appendChild(card);
+      const slider = $("input[type=range]", card);
+      slider.oninput = () => { zoneDrafts[z.id] = +slider.value; $(".zslv", card).textContent = slider.value + "%"; };
+      $(".zset", card).onclick = async () => {
+        const v = zoneDrafts[z.id] ?? +slider.value, min = +$(".zhold", card).value;
+        try { await api("api/override", "POST", { zone: z.id, pwm: Math.round(v * 2.55), minutes: min || null }); delete zoneDrafts[z.id]; poll(); }
+        catch (e) { alert(e.message); }
+      };
+      $(".zrel", card).onclick = async () => {
+        try { await api("api/override", "POST", { zone: z.id, pwm: null }); delete zoneDrafts[z.id]; poll(); } catch (e) { alert(e.message); }
+      };
+    }
+    $(".zname", card).textContent = `Z${z.id} · ${z.name}`;
+    const chip = $(".chip", card); chip.className = "chip " + z.mode; chip.textContent = MODE_LABEL[z.mode] || z.mode;
+    $(".zpct", card).innerHTML = `${z.percent}<small>%</small>`;
+    $(".zrpm", card).innerHTML = z.rpm != null ? `<span class="big num" style="font-size:22px">${z.rpm}</span> rpm` : `PWM ${z.pwm}/255`;
+    const meter = $(".meter > div", card); meter.style.width = z.percent + "%"; meter.style.background = zoneColor(z.id);
+    const ov = z.override;
+    $(".kv", card).innerHTML = `
+      <dt>Follows</dt><dd>${z.source.toUpperCase()} avg ${fmtT(z.temp)}°C</dd>
+      <dt>Curve → held</dt><dd class="num">${z.curve_pwm ?? "–"} → ${z.hyst_pwm}${z.peak != null ? ` <span class="sub">(peak ${fmtT(z.peak)}°C)</span>` : ""}</dd>
+      <dt>Floor</dt><dd>${z.floor_active ? "active" : "off"}</dd>
+      <dt>Sent to Arduino</dt><dd class="num">${z.applied ?? "–"}</dd>
+      ${ov ? `<dt>Manual hold</dt><dd>${pct(ov.pwm)}% ${ov.until ? "until " + clock(ov.until) : "until released"}</dd>` : ""}`;
+    const slider = $("input[type=range]", card);
+    if (zoneDrafts[z.id] == null && document.activeElement !== slider) {
+      slider.value = ov ? pct(ov.pwm) : z.percent; $(".zslv", card).textContent = slider.value + "%";
+    }
+    $(".zrel", card).disabled = !ov;
+  }
+
+  // disks
+  $("#disks").innerHTML = t.disks.map(d => `<tr><td>${esc(d.name)}</td><td>${esc(d.model)}</td>
+    <td class="r num">${d.standby ? "standby" : fmtT(d.temp) + "°C"}</td><td>${d.used ? "yes" : "no"}</td></tr>`).join("") ||
+    `<tr><td colspan="4" class="sub">No disk temperatures found (is smartmontools installed?)</td></tr>`;
+
+  // live-append to history
+  const last = history.rows[history.rows.length - 1];
+  if (!last || st.time - last[0] >= (st.interval || 5) - 0.5) {
+    const z = Object.fromEntries(st.zones.map(q => [q.id, q]));
+    history.rows.push([Math.floor(st.time), t.cpu.raw, t.disk.raw, z[1]?.pwm, z[2]?.pwm, z[3]?.pwm, z[1]?.rpm, z[2]?.rpm, z[3]?.rpm, ["idle", "normal", "scrub"].indexOf(p.active)]);
+    const cutoff = Date.now() / 1000 - rangeMin * 60;
+    while (history.rows.length && history.rows[0][0] < cutoff) history.rows.shift();
+    if (tab === "dash") drawHistory();
+  }
+  if (tab === "curves" && !dragging && !document.activeElement?.closest?.("#c-points")) drawCurve();
+}
+
+function drawHistory() {
+  const rows = history.rows;
+  const col = (i, f = v => v) => rows.map(r => ({ t: r[0], v: r[i] == null ? null : f(r[i]) }));
+  const bands = []; let start = null;
+  rows.forEach((r, i) => { if (r[9] === 2 && start == null) start = r[0]; if ((r[9] !== 2 || i === rows.length - 1) && start != null) { bands.push({ t0: start, t1: r[0] }); start = null; } });
+  const ts = [{ name: "CPU", color: css("--s-cpu"), values: col(1) }, { name: "Disk max", color: css("--s-disk"), values: col(2) }];
+  legend($("#lg-temp"), [...ts, { name: "Scrub profile", color: css("--scrub") }]);
+  timeChart($("#ch-temp"), { series: ts, bands, yUnit: "°", fmt: v => v.toFixed(1) + "°C" });
+  const names = Object.fromEntries((status?.zones || []).map(z => [z.id, z.name]));
+  const zs = [1, 2, 3].map(id => pwmMode === "rpm"
+    ? { name: `Z${id} ${names[id] || ""}`, color: zoneColor(id), values: col(5 + id) }
+    : { name: `Z${id} ${names[id] || ""}`, color: zoneColor(id), values: col(2 + id, pct) });
+  legend($("#lg-pwm"), zs);
+  timeChart($("#ch-pwm"), pwmMode === "rpm"
+    ? { series: zs, yMin: 0, fmt: v => v + " rpm", height: 200 }
+    : { series: zs, yMin: 0, yMax: 100, yUnit: "%", fmt: v => v + "%", height: 200 });
+}
+
+async function loadHistory() {
+  try { history = await api(`api/history?minutes=${rangeMin}&points=600`); drawHistory(); } catch (e) { console.warn(e); }
+}
+
+let pollTimer;
+async function poll() {
+  clearTimeout(pollTimer);
+  try { renderStatus(await api("api/status")); }
+  catch (e) { $("#banners").innerHTML = `<div class="banner">Lost contact with fancontrold: ${esc(e.message)}</div>`; }
+  pollTimer = setTimeout(poll, 2000);
+}
+
+$("#profile-mode").onchange = async (e) => {
+  try { await api("api/profile", "POST", { mode: e.target.value }); poll(); } catch (err) { alert(err.message); }
+};
+$("#boost").onclick = async () => {
+  try { await api("api/override", "POST", { zone: "all", pwm: 255, minutes: 10 }); poll(); } catch (e) { alert(e.message); }
+};
+
+// ════════════════════════════════════════════════════════════════
+// Config (shared by curve editor + settings)
+// ════════════════════════════════════════════════════════════════
+let config = null, saved = null, defaults = null;
+async function loadConfig() {
+  saved = await api("api/config");
+  config = structuredClone(saved);
+  defaults = defaults || await api("api/defaults");
+  renderSettings(); drawCurve();
+}
+const dirty = (part) => JSON.stringify(config?.[part]) !== JSON.stringify(saved?.[part]);
+window.addEventListener("beforeunload", (e) => { if (config && (dirty("curves") || JSON.stringify(config) !== JSON.stringify(saved))) { e.preventDefault(); e.returnValue = ""; } });
+
+// ════════════════════════════════════════════════════════════════
+// Curve editor
+// ════════════════════════════════════════════════════════════════
+let cProfile = "normal", cSource = "cpu", selected = -1; let dragging = false;
+$$("#c-profile button").forEach(b => b.onclick = () => { cProfile = b.dataset.v; selected = -1; $$("#c-profile button").forEach(x => x.classList.toggle("on", x === b)); drawCurve(); });
+$$("#c-source button").forEach(b => b.onclick = () => { cSource = b.dataset.v; selected = -1; $$("#c-source button").forEach(x => x.classList.toggle("on", x === b)); drawCurve(); });
+
+const curve = () => config.curves[cProfile][cSource];
+const interp = (c, t) => {
+  if (t <= c[0][0]) return c[0][1];
+  if (t >= c[c.length - 1][0]) return c[c.length - 1][1];
+  for (let i = 1; i < c.length; i++) if (t <= c[i][0]) return Math.floor(c[i - 1][1] + (c[i][1] - c[i - 1][1]) * (t - c[i - 1][0]) / (c[i][0] - c[i - 1][0]));
+};
+
+function drawCurve() {
+  if (!config || tab !== "curves") return;
+  const svg = $("#ch-curve"), c = curve();
+  const W = svg.clientWidth || 600, H = Math.min(420, Math.max(280, W * 0.55)), m = { l: 46, r: 46, t: 12, b: 30 };
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("height", H); svg.innerHTML = "";
+  const tLo = Math.min(20, c[0][0] - 5), tHi = Math.max(80, c[c.length - 1][0] + 5);
+  const x = t => m.l + (W - m.l - m.r) * (t - tLo) / (tHi - tLo);
+  const y = p => m.t + (H - m.t - m.b) * (1 - p / 255);
+  const inv = (px, py) => [tLo + (px - m.l) / (W - m.l - m.r) * (tHi - tLo), (1 - (py - m.t) / (H - m.t - m.b)) * 255];
+
+  for (const v of niceTicks(0, 100, 5)) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(v * 2.55), y2: y(v * 2.55), stroke: css("--grid") }, svg);
+    el("text", { x: m.l - 6, y: y(v * 2.55) + 4, "text-anchor": "end" }, svg).textContent = v + "%";
+    el("text", { x: W - m.r + 6, y: y(v * 2.55) + 4 }, svg).textContent = Math.round(v * 2.55);
+  }
+  for (const t of niceTicks(tLo, tHi, 8)) {
+    el("line", { x1: x(t), x2: x(t), y1: m.t, y2: H - m.b, stroke: css("--grid") }, svg);
+    el("text", { x: x(t), y: H - 10, "text-anchor": "middle" }, svg).textContent = t + "°C";
+  }
+  // emergency line
+  const emT = config.emergency[cSource];
+  if (emT > tLo && emT < tHi) {
+    el("line", { x1: x(emT), x2: x(emT), y1: m.t, y2: H - m.b, stroke: css("--bad"), "stroke-dasharray": "4 4" }, svg);
+    el("text", { x: x(emT) - 4, y: m.t + 12, "text-anchor": "end", style: `fill:${css("--bad")}` }, svg).textContent = "emergency";
+  }
+  // ghost curves from other profiles
+  const ghostColors = { idle: css("--s-z1"), normal: css("--muted"), scrub: css("--s-disk") };
+  const lg = [];
+  for (const p of ["idle", "normal", "scrub"]) {
+    if (p === cProfile) continue;
+    const g = config.curves[p][cSource];
+    const pts = [[tLo, g[0][1]], ...g, [tHi, g[g.length - 1][1]]];
+    el("path", { d: "M" + pts.map(q => x(q[0]) + "," + y(q[1])).join("L"), fill: "none", stroke: ghostColors[p], "stroke-width": 1.5, "stroke-dasharray": "5 4", opacity: .55 }, svg);
+    lg.push({ name: p, color: ghostColors[p] });
+  }
+  const color = cSource === "cpu" ? css("--s-cpu") : css("--s-disk");
+  legend($("#lg-curve"), [{ name: `${cProfile} · ${cSource}`, color }, ...lg]);
+  const pts = [[tLo, c[0][1]], ...c, [tHi, c[c.length - 1][1]]];
+  el("path", { d: "M" + pts.map(q => x(q[0]) + "," + y(q[1])).join("L") + `L${x(tHi)},${y(0)}L${x(tLo)},${y(0)}Z`, fill: color, opacity: .08 }, svg);
+  el("path", { d: "M" + pts.map(q => x(q[0]) + "," + y(q[1])).join("L"), fill: "none", stroke: color, "stroke-width": 2.5 }, svg);
+
+  // live marker
+  const live = status?.temps?.[cSource]?.avg;
+  if (live != null && status.profile.active === cProfile) {
+    const lp = interp(c, live);
+    el("line", { x1: x(live), x2: x(live), y1: m.t, y2: H - m.b, stroke: color, "stroke-width": 1, "stroke-dasharray": "2 3", opacity: .8 }, svg);
+    el("circle", { cx: x(live), cy: y(lp), r: 4, fill: color, "pointer-events": "none" }, svg);
+    const right = x(live) < W - 170;
+    el("text", { x: x(live) + (right ? 8 : -8), y: y(lp) + 18, "text-anchor": right ? "start" : "end",
+      style: `paint-order:stroke;stroke:${css("--panel")};stroke-width:4px;fill:${css("--text")};font-weight:600` }, svg)
+      .textContent = `now ${fmtT(live)}°C → ${pct(lp)}%`;
+  } else if (live != null) {
+    el("text", { x: m.l + 6, y: m.t + 14 }, svg).textContent = `now ${fmtT(live)}°C (${status.profile.active} profile active)`;
+  }
+
+  // handles
+  const tip = svg.parentNode.querySelector(".tip");
+  c.forEach((p, i) => {
+    const h = el("circle", { cx: x(p[0]), cy: y(p[1]), r: i === selected ? 8 : 6, fill: i === selected ? color : css("--panel"), stroke: color, "stroke-width": 2.5, class: "handle" }, svg);
+    h.onpointerdown = (ev) => {
+      ev.preventDefault(); selected = i; dragging = true; h.setPointerCapture(ev.pointerId);
+      const r = svg.getBoundingClientRect();
+      h.onpointermove = (e2) => {
+        let [t, pw] = inv((e2.clientX - r.left) * W / r.width, (e2.clientY - r.top) * H / r.height);
+        const lo = i > 0 ? c[i - 1][0] + 1 : 0, hi = i < c.length - 1 ? c[i + 1][0] - 1 : 120;
+        t = Math.max(lo, Math.min(hi, Math.round(t))); pw = Math.max(0, Math.min(255, Math.round(pw)));
+        c[i] = [t, pw]; h.setAttribute("cx", x(t)); h.setAttribute("cy", y(pw));
+        tip.innerHTML = `<b>${t}°C</b> → ${pw} (${pct(pw)}%)`; tip.style.display = "block";
+        tip.style.left = Math.min(r.width - 120, x(t) / W * r.width + 12) + "px"; tip.style.top = Math.max(0, y(pw) / H * r.height - 34) + "px";
+        renderPoints();
+      };
+      h.onpointerup = h.onpointercancel = () => { dragging = false; h.onpointermove = null; tip.style.display = "none"; drawCurve(); };
+    };
+  });
+  svg.ondblclick = (ev) => {
+    if (ev.target.classList.contains("handle")) return;
+    const r = svg.getBoundingClientRect();
+    let [t, pw] = inv((ev.clientX - r.left) * W / r.width, (ev.clientY - r.top) * H / r.height);
+    t = Math.round(t); pw = Math.max(0, Math.min(255, Math.round(pw)));
+    if (c.some(p => p[0] === t) || t < 0 || t > 120) return;
+    c.push([t, pw]); c.sort((a, b) => a[0] - b[0]); selected = c.findIndex(p => p[0] === t); drawCurve();
+  };
+  renderPoints();
+}
+
+function renderPoints() {
+  const c = curve();
+  $("#c-points").innerHTML = c.map((p, i) => `<tr${i === selected ? ' style="background:var(--panel-2)"' : ""}>
+    <td><input type="number" data-i="${i}" data-k="0" value="${p[0]}" min="0" max="120" style="width:64px"></td>
+    <td><input type="number" data-i="${i}" data-k="1" value="${p[1]}" min="0" max="255" style="width:68px"></td>
+    <td class="r num">${pct(p[1])}%</td>
+    <td class="r"><button class="btn danger" data-del="${i}" ${c.length <= 2 ? "disabled" : ""} title="Remove point" aria-label="Remove point">✕</button></td></tr>`).join("");
+  $$("#c-points input").forEach(inp => inp.onchange = () => {
+    const i = +inp.dataset.i, k = +inp.dataset.k; let v = Math.round(+inp.value);
+    v = k === 0 ? Math.max(0, Math.min(120, v)) : Math.max(0, Math.min(255, v));
+    c[i][k] = v; if (k === 0) c.sort((a, b) => a[0] - b[0]); selected = i; drawCurve();
+  });
+  $$("#c-points [data-del]").forEach(b => b.onclick = () => { c.splice(+b.dataset.del, 1); selected = -1; drawCurve(); });
+  const zones = config.zones.filter(z => z.source === cSource).map(z => `Z${z.id} ${z.name}`);
+  $("#c-uses").textContent = zones.length ? `Drives: ${zones.join(", ")}` : "No zone follows this sensor";
+  const bad = c.some((p, i) => i && p[0] <= c[i - 1][0]);
+  $("#c-msg").className = "msg" + (bad ? " err" : "");
+  $("#c-msg").textContent = bad ? "Temperatures must be strictly increasing." : dirty("curves") ? "Unsaved changes" : "";
+  $("#c-save").disabled = bad || !dirty("curves");
+  $("#c-revert").disabled = !dirty("curves");
+  $("#c-info").innerHTML = `<dt>Hysteresis</dt><dd>${config.hysteresis}°C</dd><dt>Averaging</dt><dd>${config.temp_avg_samples} samples</dd><dt>Emergency</dt><dd>${config.emergency[cSource]}°C → ${pct(config.emergency.pwm)}%</dd>`;
+  const sel = $("#c-copy");
+  sel.innerHTML = `<option value="">Copy from…</option>` + ["idle", "normal", "scrub"].flatMap(p => ["cpu", "disk"].map(s => [p, s]))
+    .filter(([p, s]) => !(p === cProfile && s === cSource)).map(([p, s]) => `<option value="${p}.${s}">${p} · ${s}</option>`).join("");
+}
+$("#c-copy").onchange = (e) => {
+  if (!e.target.value) return; const [p, s] = e.target.value.split(".");
+  config.curves[cProfile][cSource] = structuredClone(config.curves[p][s]); selected = -1; drawCurve();
+};
+$("#c-add").onclick = () => {
+  const c = curve(); const last = c[c.length - 1];
+  if (last[0] >= 120) return; c.push([Math.min(120, last[0] + 5), last[1]]); selected = c.length - 1; drawCurve();
+};
+document.addEventListener("keydown", (e) => {
+  if (tab !== "curves" || selected < 0 || !["Delete", "Backspace"].includes(e.key) || e.target.tagName === "INPUT") return;
+  const c = curve(); if (c.length > 2) { c.splice(selected, 1); selected = -1; drawCurve(); }
+});
+$("#c-revert").onclick = () => { config.curves = structuredClone(saved.curves); selected = -1; drawCurve(); };
+$("#c-defaults").onclick = () => {
+  if (!confirm(`Replace the ${cProfile} ${cSource} curve with the default?`)) return;
+  config.curves[cProfile][cSource] = structuredClone(defaults.curves[cProfile][cSource]); selected = -1; drawCurve();
+};
+$("#c-save").onclick = async () => {
+  try {
+    const body = structuredClone(saved); body.curves = config.curves;
+    await api("api/config", "PUT", body);
+    saved = structuredClone(body); config.curves = structuredClone(body.curves);
+    drawCurve(); $("#c-msg").className = "msg ok"; $("#c-msg").textContent = "Saved. Applied on the next cycle.";
+  } catch (e) { $("#c-msg").className = "msg err"; $("#c-msg").textContent = e.message; }
+};
+
+// ════════════════════════════════════════════════════════════════
+// Settings
+// ════════════════════════════════════════════════════════════════
+const FIELDS = [
+  ["Control loop", [
+    ["interval", "Cycle interval (s)", "number", "How often temps are read and fans updated."],
+    ["temp_avg_samples", "Averaging samples", "number", "Rolling average depth. 3 × 5 s ≈ 15 s smoothing."],
+    ["hysteresis", "Hysteresis (°C)", "number", "Temp must fall this far below its peak before fans slow down. Also applies to floors."],
+    ["scrub_cooldown_cycles", "Scrub cooldown (cycles)", "number", "Stay in the scrub profile this many cycles after a scrub ends."],
+    ["profile.idle_load_below", "Auto idle below load", "number", "Pick the idle profile when 1-min load average is below this. Leave empty to disable."],
+  ]],
+  ["Safety", [
+    ["emergency.cpu", "Emergency CPU (°C)", "number", "Raw CPU temp that forces every zone to emergency PWM, even over manual holds."],
+    ["emergency.disk", "Emergency disk (°C)", "number", "Same, for the hottest monitored disk."],
+    ["emergency.pwm", "Emergency PWM", "number", "0–255."],
+    ["sensor_fail_pwm", "Sensor failure PWM", "number", "Used for a zone whose sensor can't be read."],
+    ["safe_exit_pwm", "Exit PWM", "number", "Sent when the service stops."],
+  ]],
+  ["Sensors", [
+    ["sensors.cpu", "CPU sensor", "text", "\"auto\" (coretemp Package id 0 / k10temp Tctl) or a path to a hwmon temp*_input file."],
+    ["sensors.disk_exclude", "Exclude disks", "list", "Comma separated, e.g. sdd, sde. Still shown, not used for control."],
+    ["sensors.include_nvme", "Include NVMe drives", "bool", "NVMe drives run hotter than SATA disks, so check the disk curve first."],
+    ["sensors.skip_standby", "Don't wake sleeping disks", "bool", "Skip disks in standby instead of spinning them up to read temperature."],
+    ["sensors.detect_resilver", "Resilver uses scrub profile", "bool", ""],
+  ]],
+  ["Arduino & web", [
+    ["serial.port", "Serial port", "text", "\"auto\" or a path. /dev/serial/by-id/... is more stable than /dev/ttyUSB0."],
+    ["serial.watchdog_seconds", "Arduino watchdog (s)", "number", "Fans go to failsafe if the host is silent this long. 0 = off."],
+    ["web.port", "Web port", "number", "Restart the service after changing."],
+    ["web.bind", "Bind address", "text", "0.0.0.0 = all interfaces, 127.0.0.1 = local only. Restart required."],
+    ["web.token", "Access token", "password", "If set, required to change anything. Viewing stays open."],
+    ["history.hours", "History to keep (h)", "number", ""],
+  ]],
+];
+const getP = (o, p) => p.split(".").reduce((a, k) => a?.[k], o);
+const setP = (o, p, v) => { const ks = p.split("."); const last = ks.pop(); ks.reduce((a, k) => a[k], o)[last] = v; };
+
+function renderSettings() {
+  $("#s-form").innerHTML = FIELDS.map(([title, fields]) => `<div class="card"><h3>${title}</h3>${fields.map(([p, label, type, help]) => {
+    const v = getP(config, p), id = "f-" + p.replace(/\./g, "-");
+    if (type === "bool") return `<div class="field"><label class="check"><input type="checkbox" id="${id}" data-p="${p}" data-t="bool" ${v ? "checked" : ""}> ${label}</label>${help ? `<span class="help">${help}</span>` : ""}</div>`;
+    const val = type === "list" ? (v || []).join(", ") : (v ?? "");
+    return `<div class="field"><label for="${id}">${label}</label><input id="${id}" type="${type === "list" ? "text" : type}" data-p="${p}" data-t="${type}" value="${esc(val)}" step="any">${help ? `<span class="help">${help}</span>` : ""}</div>`;
+  }).join("")}</div>`).join("");
+  $$("#s-form [data-p]").forEach(inp => inp.oninput = inp.onchange = () => {
+    const t = inp.dataset.t; let v;
+    if (t === "bool") v = inp.checked;
+    else if (t === "number") v = inp.value === "" ? null : +inp.value;
+    else if (t === "list") v = inp.value.split(",").map(s => s.trim()).filter(Boolean);
+    else v = inp.value;
+    setP(config, inp.dataset.p, v); settingsDirty();
+  });
+  const src = (v, name) => `<select data-z="${name}">${["cpu", "disk"].map(s => `<option ${s === v ? "selected" : ""}>${s}</option>`).join("")}</select>`;
+  $("#s-zones").innerHTML = config.zones.map((z, i) => `<tr data-i="${i}"><td>Z${z.id}</td>
+    <td><input type="text" data-z="name" value="${esc(z.name)}" style="width:110px"></td>
+    <td>${src(z.source, "source")}</td>
+    <td>${src(z.floor?.source || "cpu", "floor.source")}</td>
+    <td><input type="number" data-z="floor.above" value="${z.floor?.above ?? ""}"></td>
+    <td><input type="number" data-z="floor.pwm" value="${z.floor?.pwm ?? ""}" min="0" max="255"></td></tr>`).join("");
+  $$("#s-zones [data-z]").forEach(inp => inp.oninput = inp.onchange = () => {
+    const z = config.zones[+inp.closest("tr").dataset.i]; const k = inp.dataset.z;
+    z.floor = z.floor || { source: "cpu", above: 60, pwm: 100 };
+    setP(z, k, inp.type === "number" ? +inp.value : inp.value); settingsDirty();
+  });
+  settingsDirty();
+}
+function settingsDirty() {
+  const a = structuredClone(config), b = structuredClone(saved); delete a.curves; delete b.curves;
+  const d = JSON.stringify(a) !== JSON.stringify(b);
+  $("#s-save").disabled = !d; $("#s-revert").disabled = !d;
+  if (d) { $("#s-msg").className = "msg"; $("#s-msg").textContent = "Unsaved changes"; }
+  else if ($("#s-msg").textContent === "Unsaved changes") $("#s-msg").textContent = "";
+}
+$("#s-revert").onclick = () => { const c = config.curves; config = structuredClone(saved); config.curves = c; renderSettings(); };
+$("#s-save").onclick = async () => {
+  try {
+    const body = structuredClone(config); body.curves = saved.curves;
+    const r = await api("api/config", "PUT", body);
+    const keepCurves = config.curves; saved = await api("api/config"); config = structuredClone(saved); config.curves = keepCurves;
+    renderSettings();
+    $("#s-msg").className = "msg ok"; $("#s-msg").textContent = r.restart_required ? "Saved. Restart the service to apply web changes." : "Saved and applied.";
+  } catch (e) { $("#s-msg").className = "msg err"; $("#s-msg").textContent = e.message; }
+};
+$("#s-reconnect").onclick = async () => { try { await api("api/reconnect", "POST", {}); $("#s-msg").className = "msg ok"; $("#s-msg").textContent = "Reconnecting…"; } catch (e) { alert(e.message); } };
+
+// ── boot ─────────────────────────────────────────────────────────
+function redrawAll() { if (tab === "dash") drawHistory(); if (tab === "curves") drawCurve(); }
+let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(redrawAll, 150); });
+poll(); loadHistory(); loadConfig().catch(e => console.warn(e));
+if (location.hash.length > 1) showTab(location.hash.slice(1));
+setInterval(loadHistory, 60000);
+</script>
+</body>
+</html>

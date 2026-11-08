@@ -1,0 +1,19 @@
+[Unit]
+Description=Proxmox fan control (Arduino PWM zones + web UI)
+After=local-fs.target zfs.target
+Wants=zfs.target
+# keep retrying forever: fans matter more than a start-limit
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/proxmox-fancontrol/fancontrold.py --config /etc/proxmox-fancontrol/config.json
+Restart=always
+RestartSec=5
+TimeoutStopSec=15
+StateDirectory=proxmox-fancontrol
+RuntimeDirectory=proxmox-fancontrol
+Nice=-5
+
+[Install]
+WantedBy=multi-user.target

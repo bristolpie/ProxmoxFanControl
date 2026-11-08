@@ -421,7 +421,7 @@ function renderStatus(st) {
   status = st;
   if (first && tab === "dash") drawHistory();   // legend needs zone names
   if (first && config) renderZoneSettings();     // floor dropdowns need the sensor list
-  $("#host").textContent = st.host + (st.simulate ? " · simulation" : "");
+  $("#host").textContent = `${st.host} · v${st.version}${st.simulate ? " · simulation" : ""}`;
   document.title = `Fan Control · ${st.host}`;
   const a = st.arduino;
   $("#p-arduino").innerHTML = `<span class="dot ${a.connected ? "ok" : "bad"}"></span><span>${a.connected

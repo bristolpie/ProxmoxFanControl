@@ -151,6 +151,8 @@
 
   <!-- footnote markers: numbers match the notes at the bottom -->
   <g class="mark"><circle cx="678" cy="136" r="9"/><text x="678" y="140">1</text></g>
+  <g class="mark"><circle cx="678" cy="296" r="9"/><text x="678" y="300">1</text></g>
+  <g class="mark"><circle cx="678" cy="456" r="9"/><text x="678" y="460">1</text></g>
   <g class="mark"><circle cx="380" cy="165" r="9"/><text x="380" y="169">2</text></g>
   <g class="mark"><circle cx="380" cy="205" r="9"/><text x="380" y="209">3</text></g>
   <g class="mark"><circle cx="1078" cy="226" r="9"/><text x="1078" y="230">4</text></g>

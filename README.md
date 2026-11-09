@@ -32,8 +32,7 @@ On the Proxmox host, as root:
 ```bash
 git clone https://github.com/bristolpie/ProxmoxFanControl.git
 cd ProxmoxFanControl
-./install.sh          # install the service + web UI
-./flash.sh --release  # flash the Arduino firmware (see below)
+./install.sh          # install the service + web UI, and flash the Arduino if needed
 ```
 
 Then open `http://<proxmox-ip>:8090/`.
@@ -45,13 +44,14 @@ The installer:
 3. Checks whether another program already holds that serial port and offers to stop and disable its systemd service. Only one program can talk to the Arduino.
 4. Copies the program to `/opt/proxmox-fancontrol/` and creates `/etc/proxmox-fancontrol/config.json`.
 5. Installs, enables and starts `proxmox-fancontrol.service`, then checks that it responds.
+6. Asks the Arduino for its firmware version. If it's older than the one in this release (or too old to say), it offers to flash it with `flash.sh --release`, and falls back to building from source if the download fails.
 
-Re-run `./install.sh` after a `git pull` to upgrade. Your config is kept.
+Re-run `./install.sh` after a `git pull` to upgrade. Your config is kept, and you'll be offered a flash only when the firmware has changed.
 
 | Command | Does |
 |---|---|
 | `./install.sh --port 9000` | Use a different web port (first install only) |
-| `./install.sh --yes` | Don't ask any questions |
+| `./install.sh --yes` | Don't ask any questions (never flashes; prints the command if a flash is needed) |
 | `./install.sh --uninstall` | Remove the service and program, keep the config |
 | `./install.sh --uninstall --purge` | Also remove the config and history |
 

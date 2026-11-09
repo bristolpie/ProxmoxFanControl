@@ -177,6 +177,45 @@ else
     c_warn "service didn't answer yet — check: journalctl -u $APP -e"
 fi
 
+# ── Firmware check ────────────────────────────────────────────────
+# The firmware answers "V" with "VER n"; compare with the version in this checkout.
+want=$(grep -o 'println("VER [0-9]*")' "$SRC/arduino/fan_zone_control/fan_zone_control.ino" | grep -o '[0-9]*' | head -1)
+if [[ "${ok:-0}" == 1 && -n "$want" ]]; then
+    # "<firmware> <port>"; firmware is 0 for old firmware without the V command, "offline" if not connected
+    read -r have fw_port < <(python3 - "$port" <<'PY' 2>/dev/null || echo "offline -"
+import json, sys, time, urllib.request
+for _ in range(15):          # the daemon may still be opening the port
+    a = json.load(urllib.request.urlopen(f"http://127.0.0.1:{sys.argv[1]}/api/status", timeout=2))["arduino"]
+    if a["connected"]:
+        print(a["firmware"] or 0, a["port"] or "-")
+        break
+    time.sleep(1)
+else:
+    print("offline -")
+PY
+)
+    if [[ "$have" == offline ]]; then
+        c_warn "Arduino not connected, so the firmware wasn't checked. Flash it later with: ./flash.sh --release"
+    elif (( have == want )); then
+        c_ok "Arduino firmware v$have is up to date"
+    elif (( have > want )); then
+        c_warn "Arduino firmware v$have is newer than this checkout (v$want); leaving it alone"
+    else
+        c_warn "Arduino firmware is v$have; this release has v$want"
+        if (( YES )); then
+            c_info "not flashing unattended; run: ./flash.sh --release --port $fw_port"
+        elif ask "Flash the Arduino now? (fans run at a fixed speed for a few seconds)"; then
+            if ! "$SRC/flash.sh" --release --port "$fw_port"; then
+                ask "Download failed. Build the firmware from source instead? (installs arduino-cli)" \
+                    && "$SRC/flash.sh" --build --port "$fw_port" \
+                    || c_warn "firmware not updated; try later with ./flash.sh"
+            fi
+        else
+            c_info "skipped; flash later with: ./flash.sh --release"
+        fi
+    fi
+fi
+
 cat <<EOF
 
   Logs:      journalctl -u $APP -f

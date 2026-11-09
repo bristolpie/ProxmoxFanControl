@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="770" viewBox="0 0 1180 770" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13">
-  <title>Wiring: Arduino Nano drives one 4-pin fan splitter per zone; fan power is fed into a spare splitter leg from SATA</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="790" viewBox="0 0 1180 790" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13">
+  <title>Wiring: SATA power into each fan splitter's female end; the Arduino and the fans on its male legs</title>
   <defs>
     <symbol id="fan" viewBox="-20 -20 40 40">
       <circle r="18" fill="#f3f4f6" stroke="#4b5563" stroke-width="2"/>
@@ -26,10 +26,11 @@
       .cable { stroke: #374151; stroke-width: 7; fill: none; stroke-linecap: round; }
       .leg   { stroke: #374151; stroke-width: 3; fill: none; }
       .conn  { fill: #1f2937; stroke: #111827; stroke-width: 1; }
+      .fend  { fill: #ffffff; stroke: #1f2937; stroke-width: 2.5; }
     </style>
   </defs>
 
-  <rect x="0" y="0" width="1180" height="770" rx="14" fill="#ffffff"/>
+  <rect x="0" y="0" width="1180" height="790" rx="14" fill="#ffffff"/>
 
   <!-- Host -->
   <rect class="box" x="60" y="30" width="200" height="70" rx="8"/>
@@ -62,60 +63,68 @@
   <path class="gnd" d="M264 600 H440 V165 H494 M440 325 H494 M440 485 H494"/>
   <circle cx="440" cy="325" r="5" fill="#111827"/><circle cx="440" cy="485" r="5" fill="#111827"/>
   <text class="sub" x="282" y="436">jumper wires</text>
-  <text class="sub" x="282" y="452">(Dupont / patch leads)</text>
-  <text class="sub" x="282" y="468">into each splitter's</text>
-  <text class="sub" x="282" y="484">single end, in place of</text>
-  <text class="sub" x="282" y="500">a motherboard header</text>
+  <text class="sub" x="282" y="452">(female–female Dupont)</text>
+  <text class="sub" x="282" y="468">onto one male leg</text>
+  <text class="sub" x="282" y="484">of each splitter</text>
 
-  <!-- splitter single ends (one per zone) -->
-  <g id="ends">
-    <text class="zone" x="494" y="142">Z1 · Front: 1→3 splitter</text>
-    <text class="zone" x="494" y="302">Z2 · Top: 1→2 splitter</text>
-    <text class="zone" x="494" y="462">Z3 · Rear: 1→2 splitter</text>
-  </g>
+  <!-- the Arduino's leg on each splitter -->
+  <text class="zone" x="494" y="142">Z1 · Front: 1→3 splitter</text>
+  <text class="zone" x="494" y="302">Z2 · Top: 1→2 splitter</text>
+  <text class="zone" x="494" y="462">Z3 · Rear: 1→2 splitter</text>
+  <rect class="conn" x="500" y="150" width="112" height="90" rx="4"/>
+  <rect class="conn" x="500" y="310" width="112" height="90" rx="4"/>
+  <rect class="conn" x="500" y="470" width="112" height="90" rx="4"/>
   <g>
-    <rect class="conn" x="500" y="150" width="112" height="90" rx="4"/>
-    <rect class="conn" x="500" y="310" width="112" height="90" rx="4"/>
-    <rect class="conn" x="500" y="470" width="112" height="90" rx="4"/>
-    <g id="pins">
-      <text class="pin" x="510" y="169">1 GND</text><text class="pinNC" x="510" y="189">2 12V  —</text>
-      <text class="pin" x="510" y="209">3 TACH</text><text class="pin" x="510" y="229">4 PWM</text>
-      <text class="pin" x="510" y="329">1 GND</text><text class="pinNC" x="510" y="349">2 12V  —</text>
-      <text class="pin" x="510" y="369">3 TACH</text><text class="pin" x="510" y="389">4 PWM</text>
-      <text class="pin" x="510" y="489">1 GND</text><text class="pinNC" x="510" y="509">2 12V  —</text>
-      <text class="pin" x="510" y="529">3 TACH</text><text class="pin" x="510" y="549">4 PWM</text>
-    </g>
+    <text class="pin" x="510" y="169">1 GND</text><text class="pinNC" x="510" y="189">2 12V  —</text>
+    <text class="pin" x="510" y="209">3 TACH</text><text class="pin" x="510" y="229">4 PWM</text>
+    <text class="pin" x="510" y="329">1 GND</text><text class="pinNC" x="510" y="349">2 12V  —</text>
+    <text class="pin" x="510" y="369">3 TACH</text><text class="pin" x="510" y="389">4 PWM</text>
+    <text class="pin" x="510" y="489">1 GND</text><text class="pinNC" x="510" y="509">2 12V  —</text>
+    <text class="pin" x="510" y="529">3 TACH</text><text class="pin" x="510" y="549">4 PWM</text>
   </g>
-  <text class="tiny" x="500" y="256">female end · 12 V pin left empty</text>
-  <text class="tiny" x="500" y="416">female end</text>
-  <text class="tiny" x="500" y="576">female end</text>
-  <text class="tiny" x="740" y="262">male legs</text>
-  <text class="tiny" x="740" y="412">male legs</text>
-  <text class="tiny" x="740" y="572">male legs</text>
+  <text class="tiny" x="500" y="256">male leg · 12 V pin left empty</text>
+  <text class="tiny" x="500" y="416">male leg</text>
+  <text class="tiny" x="500" y="576">male leg</text>
 
-  <!-- splitter cables and legs -->
-  <path class="cable" d="M612 195 H668"/>
-  <path class="leg" d="M668 195 L740 155 M668 195 H740 M668 195 L740 235"/>
-  <path class="cable" d="M612 355 H668"/>
-  <path class="leg" d="M668 355 L740 325 M668 355 L740 385"/>
-  <path class="cable" d="M612 515 H668"/>
-  <path class="leg" d="M668 515 L740 485 M668 515 L740 545"/>
+  <!-- splitter bodies: legs meet at a junction; the single (female) end goes up to the SATA plug -->
+  <path class="leg" d="M612 195 H668"/><circle cx="668" cy="195" r="6" fill="#374151"/>
+  <path class="cable" d="M668 195 L740 155"/>
+  <path class="leg" d="M668 195 H740 M668 195 L740 235"/>
+
+  <path class="leg" d="M612 355 H668"/><circle cx="668" cy="355" r="6" fill="#374151"/>
+  <path class="cable" d="M668 355 L740 315"/>
+  <path class="leg" d="M668 355 L740 385"/>
+
+  <path class="leg" d="M612 515 H668"/><circle cx="668" cy="515" r="6" fill="#374151"/>
+  <path class="cable" d="M668 515 L740 475"/>
+  <path class="leg" d="M668 515 L740 545"/>
+
+  <!-- female single ends (white) and male fan legs (dark) -->
+  <rect class="fend" x="740" y="145" width="36" height="20" rx="3"/>
+  <rect class="fend" x="740" y="305" width="36" height="20" rx="3"/>
+  <rect class="fend" x="740" y="465" width="36" height="20" rx="3"/>
   <g class="conn">
-    <rect x="740" y="145" width="36" height="20" rx="3"/><rect x="740" y="185" width="36" height="20" rx="3"/><rect x="740" y="225" width="36" height="20" rx="3"/>
-    <rect x="740" y="315" width="36" height="20" rx="3"/><rect x="740" y="375" width="36" height="20" rx="3"/>
-    <rect x="740" y="475" width="36" height="20" rx="3"/><rect x="740" y="535" width="36" height="20" rx="3"/>
+    <rect x="740" y="185" width="36" height="20" rx="3"/><rect x="740" y="225" width="36" height="20" rx="3"/>
+    <rect x="740" y="375" width="36" height="20" rx="3"/>
+    <rect x="740" y="535" width="36" height="20" rx="3"/>
   </g>
+  <text class="tiny" x="690" y="140">female end</text>
+  <text class="tiny" x="690" y="300">female end</text>
+  <text class="tiny" x="690" y="460">female end</text>
+  <text class="tiny" x="740" y="262">male legs</text>
+  <text class="tiny" x="740" y="412">male leg</text>
+  <text class="tiny" x="740" y="572">male leg</text>
 
-  <!-- fan power: SATA → 3 power-only fan plugs, one into a spare leg of each splitter -->
+  <!-- fan power: SATA → 3 power-only fan plugs, one into each splitter's female end -->
   <rect class="box" x="790" y="30" width="250" height="70" rx="8"/>
   <text class="title" x="915" y="56" text-anchor="middle">PSU · SATA power</text>
   <text class="sub" x="915" y="76" text-anchor="middle">SATA → 3 fan plugs (12 V + GND only)</text>
-  <path class="v12" d="M850 100 V485"/>
-  <path class="v12" d="M776 155 H850 M776 325 H850 M776 485 H850"/>
-  <circle cx="850" cy="155" r="5" fill="#eab308"/><circle cx="850" cy="325" r="5" fill="#eab308"/>
+  <path class="v12" d="M850 100 V475"/>
+  <path class="v12" d="M776 155 H850 M776 315 H850 M776 475 H850"/>
+  <circle cx="850" cy="155" r="5" fill="#eab308"/><circle cx="850" cy="315" r="5" fill="#eab308"/>
   <text class="tiny" x="782" y="146">power in</text>
-  <text class="tiny" x="782" y="316">power in</text>
-  <text class="tiny" x="782" y="476">power in</text>
+  <text class="tiny" x="782" y="306">power in</text>
+  <text class="tiny" x="782" y="466">power in</text>
 
   <!-- fans -->
   <path class="leg" d="M776 195 H900 M776 235 H900"/>
@@ -145,7 +154,8 @@
     <path class="tach" d="M340 0 H374"/><text x="384" y="4">Tach / RPM (optional)</text>
     <path class="v12" d="M560 0 H594"/><text x="604" y="4">12 V + GND fan power: never to the Arduino</text>
   </g>
-  <text class="sub" x="60" y="706">Every connector on a splitter shares the same wires, so the Arduino's GND, the SATA ground and the fans all end up on one common ground.</text>
-  <text class="sub" x="60" y="726">Splitters usually carry tach (pin 3) on one leg only: plug the fan you want RPM from into that leg.</text>
-  <text class="sub" x="60" y="746">More fans in a zone: use a 1→3 / 1→4 splitter, or daisy-chain fans that have a pass-through connector.</text>
+  <text class="sub" x="60" y="706">The SATA power plug goes in each splitter's single female end; the Arduino and the fans go on its male legs.</text>
+  <text class="sub" x="60" y="726">All connectors on a splitter share GND, 12 V and PWM, so the Arduino's GND, the SATA ground and the fans end up on one common ground.</text>
+  <text class="sub" x="60" y="746">RPM: tach only gets from the fan to the Arduino if both of their legs carry pin 3. Many splitters wire pin 3 on one leg only, so check yours.</text>
+  <text class="sub" x="60" y="766">More fans in a zone: use a 1→3 / 1→4 splitter, or daisy-chain fans that have a pass-through connector.</text>
 </svg>

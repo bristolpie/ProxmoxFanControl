@@ -35,7 +35,7 @@ from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 log = logging.getLogger("fancontrold")
 
 PROFILES = ("normal", "scrub")

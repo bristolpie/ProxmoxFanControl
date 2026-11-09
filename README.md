@@ -94,15 +94,15 @@ If the host is a VM with the Arduino passed through, run the script inside the V
 
 ### What you need
 
-Only the Arduino is essential. The rest is one way to wire it up without soldering.
+Only the Arduino is essential. The rest is one way to wire it up without soldering. The letters match the tags on the [wiring diagram](#how-each-zone-is-wired).
 
-| Item | Notes |
-|---|---|
-| **Arduino Nano** (ATmega328P) | Clones are fine. Plug it into the server with a USB cable (Mini-USB on the classic Nano; clones may use micro-USB or USB-C). The CH340 USB chip on most clones works on Proxmox with no driver install. |
-| 4-pin PWM fans | Any standard 4-pin PC fans. Fans with a pass-through connector (e.g. Arctic "PST") can be daisy-chained, so you need fewer splitters. |
-| SATA → fan power lead with 3 plugs | One plug per zone. These carry 12 V and GND only (no PWM or tach pins), and power the fans from the PSU, since the motherboard has no fan headers. |
-| 4-pin PWM fan splitter, one per zone | 1→2 for one fan, or 1→3 / 1→4 for more. The SATA power plug goes in its female end; the Arduino and the fans go on its male legs. |
-| Jumper wires (Dupont / patch leads) | Female–female: one end onto the Arduino's header pins, the other onto a male leg of the splitter. |
+| | Item | Notes |
+|---|---|---|
+| **A** | **Arduino Nano** (ATmega328P) | Clones are fine. Plug it into the server with a USB cable (Mini-USB on the classic Nano; clones may use micro-USB or USB-C). The CH340 USB chip on most clones works on Proxmox with no driver install. |
+| **B** | 4-pin PWM fans | Any standard 4-pin PC fans. Fans with a pass-through connector (e.g. Arctic "PST") can be daisy-chained, so you need fewer splitters. |
+| **C** | SATA → fan power lead with 3 plugs | One plug per zone. These carry 12 V and GND only (no PWM or tach pins), and power the fans from the PSU, since the motherboard has no fan headers. |
+| **D** | 4-pin PWM fan splitter, one per zone | 1→2 for one fan, or 1→3 / 1→4 for more. The SATA power plug goes in its female end; the Arduino and the fans go on its male legs. |
+| **E** | Jumper wires (Dupont / patch leads) | Female–female: one end onto the Arduino's header pins, the other onto a male leg of the splitter. |
 
 > [!CAUTION]
 > Only **GND**, **PWM** and **tach** connect to the Arduino. Never connect the fans' **12 V** wire (pin 2, usually yellow) to any Arduino pin, and don't power fans from the Arduino's 5 V pin.

@@ -27,7 +27,7 @@ This project adds the missing fan controller. An Arduino Nano (a few pounds) plu
 - **Profiles.** `normal`, and a `scrub` profile that switches on automatically during a ZFS scrub or resilver.
 - **Safety.** Emergency temperature thresholds put every fan at full speed, even over a manual setting. A sensor that can't be read falls back to a safe PWM. The Arduino ramps the fans up on its own if the host goes silent (watchdog).
 - **Web UI.** Live dashboard, 24 h history, a drag-and-drop curve editor, per-zone manual hold with timeout, and settings.
-- **Fan RPM.** Read from the fans' tach wires (optional).
+- **Fan RPM.** Optional, from the fans' tach wires. Turn it on per zone in **Settings → Zones → RPM wired**.
 - **No dependencies.** Python 3 standard library only, which Proxmox already has. Also exposes a JSON API and a Prometheus `/metrics` endpoint.
 
 ![Curve editor](docs/images/curves.png)
@@ -116,7 +116,12 @@ Only the Arduino is essential. The rest is one way to wire it up without solderi
 
 All the connectors on a splitter share GND, 12 V and PWM, so the Arduino's GND, the SATA ground and the fans share one common ground. That shared ground is what lets the fans read the Arduino's PWM signal.
 
-For RPM, the fan's tach has to reach the Arduino's leg, so **both of those legs need pin 3**. Many splitters wire pin 3 on one leg only, so check yours before buying or wiring.
+**RPM may need extra work.** This wiring uses a splitter for something it wasn't designed for. A splitter is meant to plug into a motherboard header, and it usually wires tach (pin 3) only between its female end and **one** male leg, so one fan can report its speed to the header. Here, the female end holds the SATA power plug (which has no tach), so the fan's tach never reaches the Arduino's leg. Fan control isn't affected (GND, 12 V and PWM reach every leg); only the RPM readout is. To get RPM, either:
+
+- use a splitter with pin 3 on every leg (check with a multimeter: continuity between pin 3 of the fan's leg and the Arduino's leg), with only **one** fan per zone reporting tach (daisy-chained fans are fine; several tach wires joined together give nonsense), or
+- run a separate wire from one fan's pin 3 straight to the zone's tach pin on the Arduino.
+
+RPM is display-only, so it's fine to skip. Leave **RPM wired** unticked in **Settings → Zones** for zones without a tach wire; otherwise they show 0 rpm, because an unconnected tach pin reads 0.
 
 ![Wiring diagram: a SATA power plug into each fan splitter's female end; the Arduino's jumper wires and the fans on the splitter's male legs](docs/images/wiring.svg)
 
@@ -175,7 +180,7 @@ On a clean stop the fans are set to `safe_exit_pwm` (100).
 | `hysteresis` | 3 | °C |
 | `scrub_cooldown_cycles` | 3 | |
 | `curves[]` | "CPU" and "Disks" | `{name, sensor, points: {normal, scrub}}`. Points are `[temp °C, pwm 0-255]` with temperatures increasing. `scrub` may be `null` = same as normal |
-| `zones[]` | Z1 Disks, Z2/Z3 CPU | `{id, name, curve, enabled, floor: {sensor, above, pwm}}`. `floor` is optional. `enabled: false` turns a zone's fans off (emergency cooling still runs them) |
+| `zones[]` | Z1 Disks, Z2/Z3 CPU | `{id, name, curve, enabled, tach, floor: {sensor, above, pwm}}`. `floor` is optional. `enabled: false` turns a zone's fans off (emergency cooling still runs them). `tach: true` shows the zone's RPM (only if its tach wire is connected) |
 | `emergency` | cpu 90, disk 60, pwm 255 | Checked against the raw (not averaged) **CPU** and **Disks (max)** sensors |
 | `sensor_fail_pwm` | 200 | |
 | `sensors.skip_standby` | false | `true` = don't spin up sleeping disks to read their temperature |

@@ -225,6 +225,8 @@ def validate_config(cfg):
         if z.get("id") not in (1, 2, 3) or z["id"] in ids:
             raise ValueError("zone ids must be unique values 1-3")
         ids.add(z["id"])
+        if not isinstance(z.get("tach", False), bool):
+            raise ValueError(f"zone {z['id']} tach must be true or false")
         if not isinstance(z.get("enabled", True), bool):
             raise ValueError(f"zone {z['id']} enabled must be true or false")
         if z.get("curve") not in names:
@@ -874,7 +876,7 @@ class Controller:
                     if zid in want and v != want[zid]:
                         log.warning("zone %d reads %d, expected %d — resending", zid, v, want[zid])
                         self.sent.pop(zid, None)
-        if self.arduino and self.arduino_info["tach"]:
+        if self.arduino and self.arduino_info["tach"] and any(z.get("tach") for z in cfg["zones"]):
             reply = self._cmd("R")
             if reply:
                 for a, b in re.findall(r"R(\d):(\d+)", reply):
@@ -1055,7 +1057,8 @@ class Controller:
                     "hyst_pwm": zs.pwm, "peak": zs.peak, "floor_active": zs.floor_active,
                     "held": curve_pwm is not None and zs.pwm > curve_pwm,
                     "release_below": None if zs.peak is None else round(zs.peak - H, 1),
-                    "floor": f, "enabled": enabled, "mode": mode, "override": ov,
+                    "floor": f, "enabled": enabled, "tach": bool(z.get("tach", False)),
+                    "mode": mode, "override": ov,
                 })
 
         # ── talk to the arduino (outside the lock so the web UI never waits on serial) ──
@@ -1063,7 +1066,8 @@ class Controller:
 
         with self.lock:
             for zo in zones_out:
-                zo["rpm"] = self.rpm.get(zo["id"]) if self.arduino_info["tach"] else None
+                # only zones marked "RPM wired": an unconnected tach pin just reads 0
+                zo["rpm"] = self.rpm.get(zo["id"]) if self.arduino_info["tach"] and zo["tach"] else None
                 zo["applied"] = self.sent.get(zo["id"])
 
             used_by = {}
@@ -1101,11 +1105,10 @@ class Controller:
             r = lambda v: None if v is None else round(v, 1)
             pc = 2 if profile == "scrub" else 1    # history column: 1 = normal, 2 = scrub
             pwm_by = {zo["id"]: zo["pwm"] for zo in zones_out}
+            rpm_by = {zo["id"]: zo["rpm"] for zo in zones_out}
             self.history.append([int(now), r(cpu_raw), r(disk_raw),
                                  pwm_by.get(1), pwm_by.get(2), pwm_by.get(3),
-                                 self.rpm[1] if self.arduino_info["tach"] else None,
-                                 self.rpm[2] if self.arduino_info["tach"] else None,
-                                 self.rpm[3] if self.arduino_info["tach"] else None, pc])
+                                 rpm_by.get(1), rpm_by.get(2), rpm_by.get(3), pc])
         return self.status
 
     def run(self):

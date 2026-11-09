@@ -224,7 +224,7 @@ svg.chart text { fill: var(--muted); font-size: 11px; }
     <div class="section-title">Zones</div>
     <div class="card" style="overflow-x:auto">
       <table>
-        <thead><tr><th>Zone</th><th>On</th><th>Name</th><th>Curve</th><th>Floor sensor</th><th>Floor when above °C</th><th>Floor PWM</th></tr></thead>
+        <thead><tr><th>Zone</th><th>On</th><th>Name</th><th>Curve</th><th title="Tick if this zone's fan tach wire reaches the Arduino">RPM wired</th><th>Floor sensor</th><th>Floor when above °C</th><th>Floor PWM</th></tr></thead>
         <tbody id="s-zones"></tbody>
       </table>
     </div>
@@ -540,9 +540,12 @@ function drawHistory() {
   legend($("#lg-temp"), [...ts, { name: "Scrub profile", color: css("--scrub") }]);
   timeChart($("#ch-temp"), { series: ts, bands, yUnit: "°", fmt: v => v.toFixed(1) + "°C" });
   const names = Object.fromEntries((status?.zones || []).map(z => [z.id, z.name]));
-  const zs = [1, 2, 3].map(id => pwmMode === "rpm"
-    ? { name: `Z${id} ${names[id] || ""}`, color: zoneColor(id), values: col(5 + id) }
-    : { name: `Z${id} ${names[id] || ""}`, color: zoneColor(id), values: col(2 + id, pct) });
+  const wired = (status?.zones || []).filter(z => z.tach).map(z => z.id);
+  $("#pwm-mode").style.display = wired.length ? "" : "none";
+  if (!wired.length && pwmMode === "rpm") { pwmMode = "pwm"; $$("#pwm-mode button").forEach(x => x.classList.toggle("on", x.dataset.v === "pwm")); }
+  const zs = pwmMode === "rpm"
+    ? wired.map(id => ({ name: `Z${id} ${names[id] || ""}`, color: zoneColor(id), values: col(5 + id) }))
+    : [1, 2, 3].map(id => ({ name: `Z${id} ${names[id] || ""}`, color: zoneColor(id), values: col(2 + id, pct) }));
   legend($("#lg-pwm"), zs);
   timeChart($("#ch-pwm"), pwmMode === "rpm"
     ? { series: zs, yMin: 0, fmt: v => v + " rpm", height: 200 }
@@ -876,6 +879,7 @@ function renderZoneSettings() {
     <td><input type="checkbox" data-z="enabled" ${z.enabled === false ? "" : "checked"} aria-label="Zone ${z.id} enabled"></td>
     <td><input type="text" data-z="name" value="${esc(z.name)}" style="width:110px"></td>
     <td>${curveSel(z.curve)}</td>
+    <td><input type="checkbox" data-z="tach" ${z.tach ? "checked" : ""} aria-label="Zone ${z.id} RPM wired"></td>
     <td><select data-z="floor.sensor" style="max-width:260px">${sensorOptions(z.floor?.sensor || "", "No floor")}</select></td>
     <td><input type="number" data-z="floor.above" value="${z.floor?.above ?? ""}" ${z.floor ? "" : "disabled"}></td>
     <td><input type="number" data-z="floor.pwm" value="${z.floor?.pwm ?? ""}" min="0" max="255" ${z.floor ? "" : "disabled"}></td></tr>`).join("");
@@ -885,6 +889,8 @@ function renderZoneSettings() {
       if (!inp.value) delete z.floor;
       else z.floor = Object.assign({ above: 60, pwm: 100 }, z.floor, { sensor: inp.value });
       if (inp.type !== "text") { inp.blur(); renderZoneSettings(); }
+    } else if (k === "tach") {
+      if (inp.checked) z.tach = true; else delete z.tach;
     } else if (k === "enabled") {
       if (inp.checked) delete z.enabled; else z.enabled = false;
     } else if (k.startsWith("floor.")) {

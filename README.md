@@ -10,6 +10,15 @@ Many home servers are built from ex-office PCs, such as a Dell OptiPlex SFF boar
 
 This project adds the missing fan controller. An Arduino Nano (a few pounds) plugged into a USB port drives up to three zones of standard 4-pin PWM fans. A small service on the Proxmox host reads the drive and CPU temperatures and sets the fan speeds from curves you choose. Front fans can follow the hottest drive in the pool, exhaust fans can speed up when the CPU is working hard, and everything runs faster while a scrub is in progress. It's tuned for storage servers, but works on any Linux machine where the motherboard can't control the case fans.
 
+> [!WARNING]
+> **Use at your own risk.** This software controls the cooling of your server. A wiring mistake, a bad fan curve or a bug can let drives or the CPU overheat, or damage the Arduino, the fans or the host. It comes with no warranty (see [LICENSE](LICENSE)).
+>
+> - **Never connect the fans' 12 V wire to the Arduino.** Only ground, PWM and (optionally) tach go to the Arduino. 12 V on any Arduino pin will destroy it, and can damage the USB port it's plugged into.
+> - **Watch the temperatures after any change.** Keep an eye on the dashboard for the first few hours after installing, rewiring or editing a curve, and during your first scrub.
+> - **Know your hardware's limits.** Check your drives' and CPU's maximum operating temperatures, and set the emergency thresholds in **Settings → Safety** below them.
+>
+> The design leans towards cooling: if the service stops or the host hangs, the Arduino's watchdog raises every fan to a safe speed after 30 s, and most 4-pin fans run at full speed if their PWM wire comes loose. If the Arduino itself loses power (e.g. its USB cable is pulled), what the fans do depends on the fans, so don't rely on it. These are safety nets, not guarantees.
+
 ![Dashboard](docs/images/dashboard.png)
 
 - **Sensors found automatically.** CPU, every disk, NVMe drives, motherboard and GPU sensors (whatever the kernel exposes), plus combined sensors such as "hottest disk" and "hottest disk in ZFS pool `tank`".
@@ -94,6 +103,9 @@ Only the Arduino is essential. The rest is one way to wire it up without solderi
 | SATA power → fan power adapter | Powers the fans from the PSU, since the motherboard has no fan headers. |
 | PWM fan hub / splitter, one per zone | Powered from SATA. Its 4-pin input lead takes the PWM signal (and RPM, if you want it) from the Arduino and passes it to every fan plugged into it. |
 | Jumper wires (Dupont / patch leads) | Connect the Arduino pins to the hub's 4-pin input lead. |
+
+> [!CAUTION]
+> Only **GND**, **PWM** and **tach** connect to the Arduino. Never connect the fans' or hub's **12 V** wire (pin 2, usually yellow) to any Arduino pin, and don't power fans from the Arduino's 5 V pin.
 
 Each zone has one input from the Arduino, so if a zone has more than one fan, chain them onto that input: plug them all into the zone's hub/splitter, or daisy-chain fans that have a pass-through connector. Each zone needs just **two wires** from the Arduino: the PWM pin to the hub's PWM pin (pin 4, blue), and Arduino **GND** to the hub's ground (pin 1, black). Add a third wire, the hub's tach (pin 3), to the zone's tach pin if you want RPM. Hubs usually pass through the tach of one fan only.
 

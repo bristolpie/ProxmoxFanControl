@@ -109,6 +109,8 @@ Only the Arduino is essential. The rest is one way to wire it up without solderi
 
 Each zone has one input from the Arduino, so if a zone has more than one fan, chain them onto that input: plug them all into the zone's hub/splitter, or daisy-chain fans that have a pass-through connector. Each zone needs just **two wires** from the Arduino: the PWM pin to the hub's PWM pin (pin 4, blue), and Arduino **GND** to the hub's ground (pin 1, black). Add a third wire, the hub's tach (pin 3), to the zone's tach pin if you want RPM. Hubs usually pass through the tach of one fan only.
 
+![Wiring diagram: Proxmox host to Arduino Nano over USB; PWM and GND jumper wires from the Arduino to one PWM fan hub per zone; hubs powered from the PSU via SATA](docs/images/wiring.svg)
+
 ### Pins
 
 | Zone | Default role | PWM pin | Tach pin | Default curve | Default floor |

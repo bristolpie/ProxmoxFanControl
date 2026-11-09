@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="700" viewBox="0 0 1120 700" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13">
-  <title>Wiring: Proxmox host, Arduino Nano, PWM fan hubs and fans</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="770" viewBox="0 0 1180 770" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13">
+  <title>Wiring: Arduino Nano drives one 4-pin fan splitter per zone; fan power is fed into a spare splitter leg from SATA</title>
   <defs>
     <symbol id="fan" viewBox="-20 -20 40 40">
       <circle r="18" fill="#f3f4f6" stroke="#4b5563" stroke-width="2"/>
@@ -14,120 +14,133 @@
       .box   { fill: #ffffff; stroke: #374151; stroke-width: 2; }
       .title { font-weight: 700; font-size: 15px; fill: #111827; }
       .sub   { fill: #4b5563; font-size: 12px; }
-      .pin   { fill: #111827; font-size: 12px; font-family: ui-monospace, Consolas, monospace; }
+      .tiny  { fill: #6b7280; font-size: 11px; }
+      .zone  { font-weight: 700; font-size: 13px; fill: #111827; }
+      .pin   { fill: #ffffff; font-size: 12px; font-family: ui-monospace, Consolas, monospace; }
       .pinNC { fill: #9ca3af; font-size: 12px; font-family: ui-monospace, Consolas, monospace; }
       .pwm   { stroke: #2563eb; stroke-width: 3; fill: none; }
       .gnd   { stroke: #111827; stroke-width: 3; fill: none; }
       .tach  { stroke: #16a34a; stroke-width: 2.5; fill: none; stroke-dasharray: 7 5; }
       .v12   { stroke: #eab308; stroke-width: 4; fill: none; }
       .usb   { stroke: #6b7280; stroke-width: 4; fill: none; }
-      .lead  { stroke: #6b7280; stroke-width: 2; fill: none; }
-      .zone  { font-weight: 700; font-size: 13px; fill: #111827; }
+      .cable { stroke: #374151; stroke-width: 7; fill: none; stroke-linecap: round; }
+      .leg   { stroke: #374151; stroke-width: 3; fill: none; }
+      .conn  { fill: #1f2937; stroke: #111827; stroke-width: 1; }
     </style>
   </defs>
 
-  <rect x="0" y="0" width="1120" height="700" rx="14" fill="#ffffff"/>
+  <rect x="0" y="0" width="1180" height="770" rx="14" fill="#ffffff"/>
 
   <!-- Host -->
   <rect class="box" x="60" y="30" width="200" height="70" rx="8"/>
   <text class="title" x="160" y="58" text-anchor="middle">Proxmox host</text>
-  <text class="sub" x="160" y="78" text-anchor="middle">Dell OptiPlex SFF · fancontrold</text>
-  <path class="usb" d="M160 100 V150"/>
-  <text class="sub" x="170" y="130">USB (power + data)</text>
+  <text class="sub" x="160" y="78" text-anchor="middle">runs proxmox-fancontrol</text>
+  <path class="usb" d="M160 100 V140"/>
+  <text class="sub" x="170" y="125">USB (power + data)</text>
 
   <!-- Arduino -->
-  <rect x="60" y="150" width="200" height="430" rx="8" fill="#0e7490" stroke="#155e75" stroke-width="2"/>
-  <text x="80" y="180" font-weight="700" font-size="15" fill="#ffffff">Arduino Nano</text>
-  <text x="80" y="198" font-size="12" fill="#cffafe">ATmega328P</text>
+  <rect x="60" y="140" width="200" height="490" rx="8" fill="#0e7490" stroke="#155e75" stroke-width="2"/>
+  <text x="80" y="170" font-weight="700" font-size="15" fill="#ffffff">Arduino Nano</text>
+  <text x="80" y="188" font-size="12" fill="#cffafe">ATmega328P</text>
   <g font-family="ui-monospace, Consolas, monospace" font-size="12" fill="#ffffff" text-anchor="end">
-    <text x="248" y="224">D2  tach</text><text x="248" y="244">D9  PWM</text>
-    <text x="248" y="364">D3  tach</text><text x="248" y="384">D10 PWM</text>
-    <text x="248" y="504">D4  tach</text><text x="248" y="524">D11 PWM</text>
-    <text x="248" y="564">GND</text>
+    <text x="248" y="209">D2  tach</text><text x="248" y="229">D9  PWM</text>
+    <text x="248" y="369">D3  tach</text><text x="248" y="389">D10 PWM</text>
+    <text x="248" y="529">D4  tach</text><text x="248" y="549">D11 PWM</text>
+    <text x="248" y="604">GND</text>
   </g>
   <g fill="#fbbf24" stroke="#78350f" stroke-width="1">
-    <rect x="256" y="216" width="8" height="8"/><rect x="256" y="236" width="8" height="8"/>
-    <rect x="256" y="356" width="8" height="8"/><rect x="256" y="376" width="8" height="8"/>
-    <rect x="256" y="496" width="8" height="8"/><rect x="256" y="516" width="8" height="8"/>
-    <rect x="256" y="556" width="8" height="8"/>
+    <rect x="256" y="201" width="8" height="8"/><rect x="256" y="221" width="8" height="8"/>
+    <rect x="256" y="361" width="8" height="8"/><rect x="256" y="381" width="8" height="8"/>
+    <rect x="256" y="521" width="8" height="8"/><rect x="256" y="541" width="8" height="8"/>
+    <rect x="256" y="596" width="8" height="8"/>
   </g>
 
-  <!-- jumper wires: tach (optional), PWM, GND bus -->
-  <path class="tach" d="M264 220 H514"/><path class="pwm" d="M264 240 H514"/>
-  <path class="tach" d="M264 360 H514"/><path class="pwm" d="M264 380 H514"/>
-  <path class="tach" d="M264 500 H514"/><path class="pwm" d="M264 520 H514"/>
-  <path class="gnd" d="M264 560 H470 V180 H514 M470 320 H514 M470 460 H514"/>
-  <circle cx="470" cy="320" r="5" fill="#111827"/><circle cx="470" cy="460" r="5" fill="#111827"/>
-  <text class="sub" x="300" y="300">jumper wires</text>
-  <text class="sub" x="300" y="316">(Dupont / patch leads)</text>
+  <!-- jumper wires -->
+  <path class="tach" d="M264 205 H494"/><path class="pwm" d="M264 225 H494"/>
+  <path class="tach" d="M264 365 H494"/><path class="pwm" d="M264 385 H494"/>
+  <path class="tach" d="M264 525 H494"/><path class="pwm" d="M264 545 H494"/>
+  <path class="gnd" d="M264 600 H440 V165 H494 M440 325 H494 M440 485 H494"/>
+  <circle cx="440" cy="325" r="5" fill="#111827"/><circle cx="440" cy="485" r="5" fill="#111827"/>
+  <text class="sub" x="282" y="436">jumper wires</text>
+  <text class="sub" x="282" y="452">(Dupont / patch leads)</text>
+  <text class="sub" x="282" y="468">into each splitter's</text>
+  <text class="sub" x="282" y="484">single end, in place of</text>
+  <text class="sub" x="282" y="500">a motherboard header</text>
 
-  <!-- PSU + 12 V -->
-  <rect class="box" x="520" y="30" width="200" height="70" rx="8"/>
-  <text class="title" x="620" y="58" text-anchor="middle">PSU</text>
-  <text class="sub" x="620" y="78" text-anchor="middle">SATA power → splitter</text>
-  <path class="v12" d="M720 65 H760 V415"/>
-  <path class="v12" d="M760 135 H700 V150 M760 275 H700 V290 M760 415 H700 V430"/>
-  <circle cx="760" cy="135" r="5" fill="#eab308"/><circle cx="760" cy="275" r="5" fill="#eab308"/>
-  <text class="sub" x="770" y="100">12 V via SATA</text>
-
-  <!-- Hubs -->
-  <g id="hubs">
-    <!-- Z1 -->
-    <text class="zone" x="520" y="142">Z1 · Front: PWM fan hub</text>
-    <rect class="box" x="520" y="150" width="200" height="110" rx="8"/>
-    <!-- Z2 -->
-    <text class="zone" x="520" y="282">Z2 · Top: PWM fan hub</text>
-    <rect class="box" x="520" y="290" width="200" height="110" rx="8"/>
-    <!-- Z3 -->
-    <text class="zone" x="520" y="422">Z3 · Rear: PWM fan hub</text>
-    <rect class="box" x="520" y="430" width="200" height="110" rx="8"/>
+  <!-- splitter single ends (one per zone) -->
+  <g id="ends">
+    <text class="zone" x="494" y="142">Z1 · Front: 1→3 splitter</text>
+    <text class="zone" x="494" y="302">Z2 · Top: 1→2 splitter</text>
+    <text class="zone" x="494" y="462">Z3 · Rear: 1→2 splitter</text>
   </g>
-  <!-- hub input-lead pins -->
   <g>
-    <g transform="translate(0 0)">
-      <rect x="512" y="176" width="10" height="8" fill="#111827"/><rect x="512" y="196" width="10" height="8" fill="#e5e7eb" stroke="#9ca3af"/>
-      <rect x="512" y="216" width="10" height="8" fill="#16a34a"/><rect x="512" y="236" width="10" height="8" fill="#2563eb"/>
-      <text class="pin" x="532" y="184">1 GND</text><text class="pinNC" x="532" y="204">2 12V (not connected)</text>
-      <text class="pin" x="532" y="224">3 TACH</text><text class="pin" x="532" y="244">4 PWM</text>
-    </g>
-    <g transform="translate(0 140)">
-      <rect x="512" y="176" width="10" height="8" fill="#111827"/><rect x="512" y="196" width="10" height="8" fill="#e5e7eb" stroke="#9ca3af"/>
-      <rect x="512" y="216" width="10" height="8" fill="#16a34a"/><rect x="512" y="236" width="10" height="8" fill="#2563eb"/>
-      <text class="pin" x="532" y="184">1 GND</text><text class="pinNC" x="532" y="204">2 12V (not connected)</text>
-      <text class="pin" x="532" y="224">3 TACH</text><text class="pin" x="532" y="244">4 PWM</text>
-    </g>
-    <g transform="translate(0 280)">
-      <rect x="512" y="176" width="10" height="8" fill="#111827"/><rect x="512" y="196" width="10" height="8" fill="#e5e7eb" stroke="#9ca3af"/>
-      <rect x="512" y="216" width="10" height="8" fill="#16a34a"/><rect x="512" y="236" width="10" height="8" fill="#2563eb"/>
-      <text class="pin" x="532" y="184">1 GND</text><text class="pin" x="532" y="204" fill="#9ca3af" style="fill:#9ca3af">2 12V (not connected)</text>
-      <text class="pin" x="532" y="224">3 TACH</text><text class="pin" x="532" y="244">4 PWM</text>
+    <rect class="conn" x="500" y="150" width="112" height="90" rx="4"/>
+    <rect class="conn" x="500" y="310" width="112" height="90" rx="4"/>
+    <rect class="conn" x="500" y="470" width="112" height="90" rx="4"/>
+    <g id="pins">
+      <text class="pin" x="510" y="169">1 GND</text><text class="pinNC" x="510" y="189">2 12V  —</text>
+      <text class="pin" x="510" y="209">3 TACH</text><text class="pin" x="510" y="229">4 PWM</text>
+      <text class="pin" x="510" y="329">1 GND</text><text class="pinNC" x="510" y="349">2 12V  —</text>
+      <text class="pin" x="510" y="369">3 TACH</text><text class="pin" x="510" y="389">4 PWM</text>
+      <text class="pin" x="510" y="489">1 GND</text><text class="pinNC" x="510" y="509">2 12V  —</text>
+      <text class="pin" x="510" y="529">3 TACH</text><text class="pin" x="510" y="549">4 PWM</text>
     </g>
   </g>
+  <text class="tiny" x="500" y="256">12 V pin left empty on this end</text>
 
-  <!-- Fans -->
-  <path class="lead" d="M720 185 H830 M720 225 H830"/>
-  <use href="#fan" x="830" y="165" width="40" height="40"/><use href="#fan" x="830" y="205" width="40" height="40"/>
-  <text class="zone" x="884" y="200">Front fans</text>
-  <text class="sub" x="884" y="218">intake over the drive stack</text>
-  <text class="sub" x="884" y="234">(5 × WD Red, ZFS pool)</text>
+  <!-- splitter cables and legs -->
+  <path class="cable" d="M612 195 H668"/>
+  <path class="leg" d="M668 195 L740 155 M668 195 H740 M668 195 L740 235"/>
+  <path class="cable" d="M612 355 H668"/>
+  <path class="leg" d="M668 355 L740 325 M668 355 L740 385"/>
+  <path class="cable" d="M612 515 H668"/>
+  <path class="leg" d="M668 515 L740 485 M668 515 L740 545"/>
+  <g class="conn">
+    <rect x="740" y="145" width="36" height="20" rx="3"/><rect x="740" y="185" width="36" height="20" rx="3"/><rect x="740" y="225" width="36" height="20" rx="3"/>
+    <rect x="740" y="315" width="36" height="20" rx="3"/><rect x="740" y="375" width="36" height="20" rx="3"/>
+    <rect x="740" y="475" width="36" height="20" rx="3"/><rect x="740" y="535" width="36" height="20" rx="3"/>
+  </g>
 
-  <path class="lead" d="M720 325 H830 M720 365 H830"/>
-  <use href="#fan" x="830" y="305" width="40" height="40"/><use href="#fan" x="830" y="345" width="40" height="40"/>
-  <text class="zone" x="884" y="340">Top fans</text>
-  <text class="sub" x="884" y="358">exhaust: CPU + disk heat</text>
+  <!-- fan power: SATA → 3 power-only fan plugs, one into a spare leg of each splitter -->
+  <rect class="box" x="790" y="30" width="250" height="70" rx="8"/>
+  <text class="title" x="915" y="56" text-anchor="middle">PSU · SATA power</text>
+  <text class="sub" x="915" y="76" text-anchor="middle">SATA → 3 fan plugs (12 V + GND only)</text>
+  <path class="v12" d="M850 100 V485"/>
+  <path class="v12" d="M776 155 H850 M776 325 H850 M776 485 H850"/>
+  <circle cx="850" cy="155" r="5" fill="#eab308"/><circle cx="850" cy="325" r="5" fill="#eab308"/>
+  <text class="tiny" x="782" y="146">power in</text>
+  <text class="tiny" x="782" y="316">power in</text>
+  <text class="tiny" x="782" y="476">power in</text>
 
-  <path class="lead" d="M720 485 H830"/>
-  <use href="#fan" x="830" y="465" width="40" height="40"/>
-  <text class="zone" x="884" y="480">Rear fan</text>
-  <text class="sub" x="884" y="498">exhaust</text>
+  <!-- fans -->
+  <path class="leg" d="M776 195 H900 M776 235 H900"/>
+  <use href="#fan" x="900" y="175" width="40" height="40"/><use href="#fan" x="900" y="215" width="40" height="40"/>
+  <text class="zone" x="955" y="200">Front fans</text>
+  <text class="sub" x="955" y="218">intake</text>
+  <text class="tiny" x="955" y="234">extra fans on extra legs</text>
+
+  <path class="leg" d="M776 385 H900"/>
+  <use href="#fan" x="900" y="365" width="40" height="40"/>
+  <path class="leg" d="M940 385 H980" stroke-dasharray="4 3"/>
+  <use href="#fan" x="980" y="365" width="40" height="40"/>
+  <text class="zone" x="1032" y="372">Top fans</text>
+  <text class="sub" x="1032" y="390">exhaust</text>
+  <text class="tiny" x="1032" y="406">daisy-chained</text>
+  <text class="tiny" x="1032" y="420">(pass-through fans)</text>
+
+  <path class="leg" d="M776 545 H900"/>
+  <use href="#fan" x="900" y="525" width="40" height="40"/>
+  <text class="zone" x="955" y="542">Rear fan</text>
+  <text class="sub" x="955" y="560">exhaust</text>
 
   <!-- Legend -->
-  <g transform="translate(60 615)">
+  <g transform="translate(60 668)">
     <path class="pwm" d="M0 0 H34"/><text x="44" y="4">PWM (required)</text>
-    <path class="gnd" d="M170 0 H204"/><text x="214" y="4">GND, shared (required)</text>
-    <path class="tach" d="M390 0 H424"/><text x="434" y="4">Tach / RPM (optional)</text>
-    <path class="v12" d="M600 0 H634"/><text x="644" y="4">12 V fan power: never to the Arduino</text>
+    <path class="gnd" d="M170 0 H204"/><text x="214" y="4">GND (required)</text>
+    <path class="tach" d="M340 0 H374"/><text x="384" y="4">Tach / RPM (optional)</text>
+    <path class="v12" d="M560 0 H594"/><text x="604" y="4">12 V + GND fan power: never to the Arduino</text>
   </g>
-  <text class="sub" x="60" y="660">Two wires per zone (PWM + GND), three with tach. Hub input-lead pin 2 (12 V) stays unconnected: the hubs take fan power from SATA.</text>
-  <text class="sub" x="60" y="678">Several fans in a zone share one input: plug them into the zone's hub, or daisy-chain fans that have a pass-through connector. Fan counts are examples.</text>
+  <text class="sub" x="60" y="706">Every connector on a splitter shares the same wires, so the Arduino's GND, the SATA ground and the fans all end up on one common ground.</text>
+  <text class="sub" x="60" y="726">Splitters usually carry tach (pin 3) on one leg only: plug the fan you want RPM from into that leg.</text>
+  <text class="sub" x="60" y="746">More fans in a zone: use a 1→3 / 1→4 splitter, or daisy-chain fans that have a pass-through connector.</text>
 </svg>

@@ -100,16 +100,23 @@ Only the Arduino is essential. The rest is one way to wire it up without solderi
 |---|---|
 | **Arduino Nano** (ATmega328P) | Clones are fine. Plug it into the server with a USB cable (Mini-USB on the classic Nano; clones may use micro-USB or USB-C). The CH340 USB chip on most clones works on Proxmox with no driver install. |
 | 4-pin PWM fans | Any standard 4-pin PC fans. Fans with a pass-through connector (e.g. Arctic "PST") can be daisy-chained, so you need fewer splitters. |
-| SATA power → fan power adapter | Powers the fans from the PSU, since the motherboard has no fan headers. |
-| PWM fan hub / splitter, one per zone | Powered from SATA. Its 4-pin input lead takes the PWM signal (and RPM, if you want it) from the Arduino and passes it to every fan plugged into it. |
-| Jumper wires (Dupont / patch leads) | Connect the Arduino pins to the hub's 4-pin input lead. |
+| SATA → fan power lead with 3 plugs | One plug per zone. These carry 12 V and GND only (no PWM or tach pins), and power the fans from the PSU, since the motherboard has no fan headers. |
+| 4-pin PWM fan splitter, one per zone | 1→2 for one fan, or 1→3 / 1→4 for more. Its single end takes the jumper wires from the Arduino; the legs take the power plug and the fans. |
+| Jumper wires (Dupont / patch leads) | Connect the Arduino pins to the splitter's single end. |
 
 > [!CAUTION]
-> Only **GND**, **PWM** and **tach** connect to the Arduino. Never connect the fans' or hub's **12 V** wire (pin 2, usually yellow) to any Arduino pin, and don't power fans from the Arduino's 5 V pin.
+> Only **GND**, **PWM** and **tach** connect to the Arduino. Never connect the fans' **12 V** wire (pin 2, usually yellow) to any Arduino pin, and don't power fans from the Arduino's 5 V pin.
 
-Each zone has one input from the Arduino, so if a zone has more than one fan, chain them onto that input: plug them all into the zone's hub/splitter, or daisy-chain fans that have a pass-through connector. Each zone needs just **two wires** from the Arduino: the PWM pin to the hub's PWM pin (pin 4, blue), and Arduino **GND** to the hub's ground (pin 1, black). Add a third wire, the hub's tach (pin 3), to the zone's tach pin if you want RPM. Hubs usually pass through the tach of one fan only.
+**How each zone is wired.** The Arduino takes the place of a motherboard fan header:
 
-![Wiring diagram: Proxmox host to Arduino Nano over USB; PWM and GND jumper wires from the Arduino to one PWM fan hub per zone; hubs powered from the PSU via SATA](docs/images/wiring.svg)
+1. **Arduino → splitter's single end** (the end that would normally plug onto a motherboard header), using jumper wires: PWM pin → pin 4, Arduino **GND** → pin 1, and optionally the tach pin → pin 3. Leave pin 2 (12 V) empty.
+2. **SATA power plug → one leg** of the splitter. This feeds 12 V and GND into the splitter.
+3. **Fan → another leg.** Splitters usually carry tach on one leg only, so for RPM put the fan on that leg.
+4. **More fans:** use a splitter with more legs, or daisy-chain fans that have a pass-through connector.
+
+All the connectors on a splitter are wired together, so the Arduino's GND, the SATA ground and the fans share one common ground. That shared ground is what lets the fans read the Arduino's PWM signal.
+
+![Wiring diagram: Arduino Nano jumper wires into the single end of a 4-pin fan splitter per zone; 12 V fed into a spare splitter leg from a SATA power lead; fans on the other legs](docs/images/wiring.svg)
 
 ### Pins
 

@@ -132,7 +132,6 @@
   <use href="#fan" x="900" y="175" width="40" height="40"/><use href="#fan" x="900" y="215" width="40" height="40"/>
   <text class="zone" x="955" y="200">Front fans</text>
   <text class="sub" x="955" y="218">intake</text>
-  <text class="tiny" x="955" y="234">extra fans on extra legs</text>
 
   <path class="leg" d="M804 385 H900"/>
   <use href="#fan" x="900" y="365" width="40" height="40"/>
@@ -155,7 +154,7 @@
   <g class="warn"><path d="M354 195 L365 213 L343 213 Z"/><text x="354" y="211">!</text></g>
   <g class="warn"><path d="M354 355 L365 373 L343 373 Z"/><text x="354" y="371">!</text></g>
   <g class="warn"><path d="M354 515 L365 533 L343 533 Z"/><text x="354" y="531">!</text></g>
-  <g class="mark"><circle cx="1078" cy="226" r="9"/><text x="1078" y="230">3</text></g>
+  <g class="mark"><circle cx="958" cy="238" r="9"/><text x="958" y="242">3</text></g>
   <g class="mark"><circle cx="960" cy="368" r="9"/><text x="960" y="372">3</text></g>
 
   <!-- Legend -->

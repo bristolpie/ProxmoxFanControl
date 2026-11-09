@@ -86,7 +86,12 @@
       <text class="pin" x="510" y="529">3 TACH</text><text class="pin" x="510" y="549">4 PWM</text>
     </g>
   </g>
-  <text class="tiny" x="500" y="256">12 V pin left empty on this end</text>
+  <text class="tiny" x="500" y="256">female end · 12 V pin left empty</text>
+  <text class="tiny" x="500" y="416">female end</text>
+  <text class="tiny" x="500" y="576">female end</text>
+  <text class="tiny" x="740" y="262">male legs</text>
+  <text class="tiny" x="740" y="412">male legs</text>
+  <text class="tiny" x="740" y="572">male legs</text>
 
   <!-- splitter cables and legs -->
   <path class="cable" d="M612 195 H668"/>

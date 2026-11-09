@@ -102,16 +102,16 @@ Only the Arduino is essential. The rest is one way to wire it up without solderi
 | 4-pin PWM fans | Any standard 4-pin PC fans. Fans with a pass-through connector (e.g. Arctic "PST") can be daisy-chained, so you need fewer splitters. |
 | SATA → fan power lead with 3 plugs | One plug per zone. These carry 12 V and GND only (no PWM or tach pins), and power the fans from the PSU, since the motherboard has no fan headers. |
 | 4-pin PWM fan splitter, one per zone | 1→2 for one fan, or 1→3 / 1→4 for more. Its single end takes the jumper wires from the Arduino; the legs take the power plug and the fans. |
-| Jumper wires (Dupont / patch leads) | Connect the Arduino pins to the splitter's single end. |
+| Jumper wires (Dupont / patch leads) | Female on the Arduino side (onto its header pins), male on the splitter side (into the splitter's female end). |
 
 > [!CAUTION]
 > Only **GND**, **PWM** and **tach** connect to the Arduino. Never connect the fans' **12 V** wire (pin 2, usually yellow) to any Arduino pin, and don't power fans from the Arduino's 5 V pin.
 
 **How each zone is wired.** The Arduino takes the place of a motherboard fan header:
 
-1. **Arduino → splitter's single end** (the end that would normally plug onto a motherboard header), using jumper wires: PWM pin → pin 4, Arduino **GND** → pin 1, and optionally the tach pin → pin 3. Leave pin 2 (12 V) empty.
-2. **SATA power plug → one leg** of the splitter. This feeds 12 V and GND into the splitter.
-3. **Fan → another leg.** Splitters usually carry tach on one leg only, so for RPM put the fan on that leg.
+1. **Arduino → splitter's single female end** (the end that would normally plug onto a motherboard header), using jumper wires with male pins: PWM pin → pin 4, Arduino **GND** → pin 1, and optionally the tach pin → pin 3. Leave pin 2 (12 V) empty.
+2. **SATA power plug → one male leg** of the splitter. This feeds 12 V and GND into the splitter.
+3. **Fan → another male leg.** Splitters usually carry tach on one leg only, so for RPM put the fan on that leg.
 4. **More fans:** use a splitter with more legs, or daisy-chain fans that have a pass-through connector.
 
 All the connectors on a splitter are wired together, so the Arduino's GND, the SATA ground and the fans share one common ground. That shared ground is what lets the fans read the Arduino's PWM signal.

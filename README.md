@@ -107,7 +107,9 @@ Only the Arduino is essential. The rest is one way to wire it up without solderi
 > [!CAUTION]
 > Only **GND**, **PWM** and **tach** connect to the Arduino. Never connect the fans' **12 V** wire (pin 2, usually yellow) to any Arduino pin, and don't power fans from the Arduino's 5 V pin.
 
-**How each zone is wired.** Each zone has a 4-pin fan splitter, with one female end and two or more male legs:
+### How each zone is wired
+
+Each zone has a 4-pin fan splitter, with one female end and two or more male legs:
 
 1. **SATA power plug → the splitter's female end.** This feeds 12 V and GND into the splitter.
 2. **Arduino → one male leg**, using female–female jumper wires: PWM pin → pin 4, optionally the tach pin → pin 3, and Arduino **GND** → pin 1 (on one zone only, see below). Leave pin 2 (12 V) empty.

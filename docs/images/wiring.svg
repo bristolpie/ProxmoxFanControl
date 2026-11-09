@@ -155,6 +155,8 @@
   <g class="mark"><circle cx="678" cy="456" r="9"/><text x="678" y="460">1</text></g>
   <g class="mark"><circle cx="380" cy="165" r="9"/><text x="380" y="169">2</text></g>
   <g class="mark"><circle cx="380" cy="205" r="9"/><text x="380" y="209">3</text></g>
+  <g class="mark"><circle cx="380" cy="365" r="9"/><text x="380" y="369">3</text></g>
+  <g class="mark"><circle cx="380" cy="525" r="9"/><text x="380" y="529">3</text></g>
   <g class="mark"><circle cx="1078" cy="226" r="9"/><text x="1078" y="230">4</text></g>
   <g class="mark"><circle cx="1112" cy="402" r="9"/><text x="1112" y="406">4</text></g>
 

@@ -60,8 +60,7 @@
   <path class="tach" d="M264 205 H494"/><path class="pwm" d="M264 225 H494"/>
   <path class="tach" d="M264 365 H494"/><path class="pwm" d="M264 385 H494"/>
   <path class="tach" d="M264 525 H494"/><path class="pwm" d="M264 545 H494"/>
-  <path class="gnd" d="M264 600 H440 V165 H494 M440 325 H494 M440 485 H494"/>
-  <circle cx="440" cy="325" r="5" fill="#111827"/><circle cx="440" cy="485" r="5" fill="#111827"/>
+  <path class="gnd" d="M264 600 H440 V165 H494"/>
   <text class="sub" x="282" y="436">jumper wires</text>
   <text class="sub" x="282" y="452">(female–female Dupont)</text>
   <text class="sub" x="282" y="468">onto one male leg</text>
@@ -83,8 +82,8 @@
     <text class="pin" x="510" y="529">3 TACH</text><text class="pin" x="510" y="549">4 PWM</text>
   </g>
   <text class="tiny" x="500" y="256">male leg · 12 V pin left empty</text>
-  <text class="tiny" x="500" y="416">male leg</text>
-  <text class="tiny" x="500" y="576">male leg</text>
+  <text class="tiny" x="500" y="416">male leg · no GND wire needed</text>
+  <text class="tiny" x="500" y="576">male leg · no GND wire needed</text>
 
   <!-- splitter bodies: legs meet at a junction; the single (female) end goes up to the SATA plug -->
   <path class="leg" d="M612 195 H668"/><circle cx="668" cy="195" r="6" fill="#374151"/>
@@ -155,7 +154,7 @@
     <path class="v12" d="M560 0 H594"/><text x="604" y="4">12 V + GND fan power: never to the Arduino</text>
   </g>
   <text class="sub" x="60" y="706">The SATA power plug goes in each splitter's single female end; the Arduino and the fans go on its male legs.</text>
-  <text class="sub" x="60" y="726">All connectors on a splitter share GND, 12 V and PWM, so the Arduino's GND, the SATA ground and the fans end up on one common ground.</text>
+  <text class="sub" x="60" y="726">All connectors on a splitter share GND, 12 V and PWM, and the SATA lead joins every splitter's ground at the PSU, so one Arduino GND wire grounds all three zones.</text>
   <text class="sub" x="60" y="746">RPM: tach only gets from the fan to the Arduino if both of their legs carry pin 3. Many splitters wire pin 3 on one leg only, so check yours.</text>
   <text class="sub" x="60" y="766">More fans in a zone: use a 1→3 / 1→4 splitter, or daisy-chain fans that have a pass-through connector.</text>
 </svg>

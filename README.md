@@ -110,11 +110,11 @@ Only the Arduino is essential. The rest is one way to wire it up without solderi
 **How each zone is wired.** Each zone has a 4-pin fan splitter, with one female end and two or more male legs:
 
 1. **SATA power plug → the splitter's female end.** This feeds 12 V and GND into the splitter.
-2. **Arduino → one male leg**, using female–female jumper wires: PWM pin → pin 4, Arduino **GND** → pin 1, and optionally the tach pin → pin 3. Leave pin 2 (12 V) empty.
+2. **Arduino → one male leg**, using female–female jumper wires: PWM pin → pin 4, optionally the tach pin → pin 3, and Arduino **GND** → pin 1 (on one zone only, see below). Leave pin 2 (12 V) empty.
 3. **Fan → another male leg.**
 4. **More fans:** use a splitter with more legs, or daisy-chain fans that have a pass-through connector.
 
-All the connectors on a splitter share GND, 12 V and PWM, so the Arduino's GND, the SATA ground and the fans share one common ground. That shared ground is what lets the fans read the Arduino's PWM signal.
+All the connectors on a splitter share GND, 12 V and PWM, and the SATA lead joins every splitter's ground back at the PSU. So a **single** GND wire from the Arduino to any one splitter puts the Arduino, the PSU and all the fans on one common ground. That shared ground is what lets the fans read the Arduino's PWM signal. Extra GND wires to the other zones do no harm, but they aren't needed.
 
 **RPM may need extra work.** This wiring uses a splitter for something it wasn't designed for. A splitter is meant to plug into a motherboard header, and it usually wires tach (pin 3) only between its female end and **one** male leg, so one fan can report its speed to the header. Here, the female end holds the SATA power plug (which has no tach), so the fan's tach never reaches the Arduino's leg. Fan control isn't affected (GND, 12 V and PWM reach every leg); only the RPM readout is. To get RPM, either:
 

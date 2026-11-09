@@ -130,7 +130,7 @@ On a clean stop the fans are set to `safe_exit_pwm` (100).
 | `hysteresis` | 3 | °C |
 | `scrub_cooldown_cycles` | 3 | |
 | `curves[]` | "CPU" and "Disks" | `{name, sensor, points: {normal, scrub}}`. Points are `[temp °C, pwm 0-255]` with temperatures increasing. `scrub` may be `null` = same as normal |
-| `zones[]` | Z1 Disks, Z2/Z3 CPU | `{id, name, curve, floor: {sensor, above, pwm}}`. `floor` is optional |
+| `zones[]` | Z1 Disks, Z2/Z3 CPU | `{id, name, curve, enabled, floor: {sensor, above, pwm}}`. `floor` is optional. `enabled: false` turns a zone's fans off (emergency cooling still runs them) |
 | `emergency` | cpu 90, disk 60, pwm 255 | Checked against the raw (not averaged) **CPU** and **Disks (max)** sensors |
 | `sensor_fail_pwm` | 200 | |
 | `sensors.skip_standby` | false | `true` = don't spin up sleeping disks to read their temperature |

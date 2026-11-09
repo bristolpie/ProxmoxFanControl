@@ -224,6 +224,8 @@ def validate_config(cfg):
         if z.get("id") not in (1, 2, 3) or z["id"] in ids:
             raise ValueError("zone ids must be unique values 1-3")
         ids.add(z["id"])
+        if not isinstance(z.get("enabled", True), bool):
+            raise ValueError(f"zone {z['id']} enabled must be true or false")
         if z.get("curve") not in names:
             raise ValueError(f"zone {z['id']} uses curve '{z.get('curve')}', which doesn't exist")
         f = z.get("floor")
@@ -1006,7 +1008,11 @@ class Controller:
                 curve = curve_points(c, profile)
                 mode = "auto"
                 curve_pwm = None
-                if t is None:
+                enabled = z.get("enabled", True)
+                if not enabled:
+                    pwm, mode = 0, "off"
+                    zs.reset()
+                elif t is None:
                     pwm = cfg["sensor_fail_pwm"]
                     mode = "sensor-fail"
                 else:
@@ -1021,7 +1027,7 @@ class Controller:
                         zs.pwm, zs.peak = curve_pwm, t
                     pwm = zs.pwm
 
-                f = z.get("floor")
+                f = z.get("floor") if enabled else None
                 if f:
                     ft = avg.get(f["sensor"])
                     if ft is not None:
@@ -1033,7 +1039,7 @@ class Controller:
                         pwm = f["pwm"]
                         mode = "floor"
 
-                ov = self.overrides.get(zid)
+                ov = self.overrides.get(zid) if enabled else None
                 if ov:
                     pwm, mode = ov["pwm"], "manual"
                 if emergency:
@@ -1046,7 +1052,9 @@ class Controller:
                     "sensor_name": readings.get(sensor, {}).get("name", sensor), "temp": t,
                     "pwm": pwm, "percent": round(pwm / 2.55), "curve_pwm": curve_pwm,
                     "hyst_pwm": zs.pwm, "peak": zs.peak, "floor_active": zs.floor_active,
-                    "mode": mode, "override": ov,
+                    "held": curve_pwm is not None and zs.pwm > curve_pwm,
+                    "release_below": None if zs.peak is None else round(zs.peak - H, 1),
+                    "floor": f, "enabled": enabled, "mode": mode, "override": ov,
                 })
 
         # ── talk to the arduino (outside the lock so the web UI never waits on serial) ──
@@ -1061,7 +1069,7 @@ class Controller:
             for c in cfg["curves"]:
                 used_by.setdefault(c["sensor"], []).append(f"curve {c['name']}")
             for z in cfg["zones"]:
-                if z.get("floor"):
+                if z.get("floor") and z.get("enabled", True):
                     used_by.setdefault(z["floor"]["sensor"], []).append(f"Z{z['id']} floor")
             sensors_out = [dict(s, avg=avg.get(sid), used_by=used_by.get(sid, []))
                            for sid, s in readings.items()]

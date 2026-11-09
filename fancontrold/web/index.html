@@ -65,6 +65,8 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .chip.auto { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
 .chip.floor { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
 .chip.manual { color: var(--manual); border-color: color-mix(in srgb, var(--manual) 40%, transparent); }
+.card.zoff > :not(h3):not(.zoffmsg) { display: none; }
+.card.zoff { opacity: .7; }
 .chip.emergency, .chip.sensor-fail { color: #fff; background: var(--bad); border-color: var(--bad); }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12.5px; margin-top: 8px; }
@@ -222,7 +224,7 @@ svg.chart text { fill: var(--muted); font-size: 11px; }
     <div class="section-title">Zones</div>
     <div class="card" style="overflow-x:auto">
       <table>
-        <thead><tr><th>Zone</th><th>Name</th><th>Curve</th><th>Floor sensor</th><th>Floor when above °C</th><th>Floor PWM</th></tr></thead>
+        <thead><tr><th>Zone</th><th>On</th><th>Name</th><th>Curve</th><th>Floor sensor</th><th>Floor when above °C</th><th>Floor PWM</th></tr></thead>
         <tbody id="s-zones"></tbody>
       </table>
     </div>
@@ -392,7 +394,7 @@ function sensorOptions(current, noneLabel) {
   }
   return html + (grp ? "</optgroup>" : "");
 }
-const MODE_LABEL = { auto: "Auto", floor: "Floor", manual: "Manual", emergency: "EMERGENCY", "sensor-fail": "Sensor fail" };
+const MODE_LABEL = { off: "Disabled", auto: "Auto", floor: "Floor", manual: "Manual", emergency: "EMERGENCY", "sensor-fail": "Sensor fail" };
 let zoneDrafts = {};   // zid -> slider % moved by the user but not yet sent
 
 // Manual-override controls: make the two-step "drag, then Hold" obvious.
@@ -457,6 +459,7 @@ function renderStatus(st) {
       card = document.createElement("div"); card.className = "card"; card.id = "zone-" + z.id;
       card.innerHTML = `
         <h3><span class="zname"></span> <span class="chip"></span></h3>
+        <div class="sub zoffmsg" style="display:none">Fans off. Turn the zone on in Settings → Zones.</div>
         <div class="row" style="justify-content:space-between;align-items:flex-end">
           <div class="big num zpct"></div><div class="sub num zrpm" style="text-align:right"></div>
         </div>
@@ -490,15 +493,19 @@ function renderStatus(st) {
     $(".zname", card).textContent = `Z${z.id} · ${z.name}`;
     const chip = $(".chip", card); chip.className = "chip " + z.mode; chip.textContent = MODE_LABEL[z.mode] || z.mode;
     $(".zpct", card).innerHTML = `${z.percent}<small>%</small>`;
-    $(".zrpm", card).innerHTML = z.rpm != null ? `<span class="big num" style="font-size:22px">${z.rpm}</span> rpm` : `PWM ${z.pwm}/255`;
+    card.classList.toggle("zoff", z.mode === "off");
+    $(".zoffmsg", card).style.display = z.mode === "off" ? "" : "none";
+    $(".zrpm", card).innerHTML = z.rpm != null ? `<span class="big num" style="font-size:22px">${z.rpm}</span> rpm` : "";
     const meter = $(".meter > div", card); meter.style.width = z.percent + "%"; meter.style.background = zoneColor(z.id);
     const ov = z.override;
+    const fl = z.floor;
     $(".kv", card).innerHTML = `
       <dt>Curve</dt><dd>${esc(z.curve)}</dd>
-      <dt>Reads</dt><dd>${esc(z.sensor_name)} · avg ${fmtT(z.temp)}°C</dd>
-      <dt>Curve → held</dt><dd class="num">${z.curve_pwm ?? "–"} → ${z.hyst_pwm}${z.peak != null ? ` <span class="sub">(peak ${fmtT(z.peak)}°C)</span>` : ""}</dd>
-      <dt>Floor</dt><dd>${z.floor_active ? "active" : "off"}</dd>
-      <dt>Sent to Arduino</dt><dd class="num">${z.applied ?? "–"}</dd>`;
+      <dt>Sensor</dt><dd>${esc(z.sensor_name)} · ${z.temp == null ? `<span style="color:var(--bad)">no reading</span>` : fmtT(z.temp) + "°C"}</dd>
+      <dt>Curve speed</dt><dd class="num">${z.curve_pwm == null ? "–" : pct(z.curve_pwm) + "%"}${z.held
+        ? ` <span class="sub" title="Hysteresis: speed stays up until the temperature falls ${config ? config.hysteresis : ""}°C below its peak">· holding ${pct(z.hyst_pwm)}% until ≤ ${fmtT(z.release_below)}°C</span>` : ""}</dd>
+      <dt>Floor</dt><dd>${fl ? `${esc(sensorName(fl.sensor))} above ${fl.above}°C → ${pct(fl.pwm)}% <span class="sub">· ${z.floor_active ? "<b>active</b>" : "not active"}</span>` : `<span class="sub">none</span>`}</dd>
+      <dt>Output</dt><dd class="num">${z.applied == null ? "–" : `${pct(z.applied)}% <span class="sub">(PWM ${z.applied}/255)</span>`}${z.applied != null && z.applied !== z.pwm ? ` <span class="sub">· sending ${pct(z.pwm)}%</span>` : ""}</dd>`;
     updateManual(card, z.id);
   }
 
@@ -866,6 +873,7 @@ function renderZoneSettings() {
   if (document.activeElement?.closest?.("#s-zones")) return;    // don't rebuild under the user's cursor
   const curveSel = (v) => `<select data-z="curve">${config.curves.map(c => `<option ${c.name === v ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>`;
   $("#s-zones").innerHTML = config.zones.map((z, i) => `<tr data-i="${i}"><td>Z${z.id}</td>
+    <td><input type="checkbox" data-z="enabled" ${z.enabled === false ? "" : "checked"} aria-label="Zone ${z.id} enabled"></td>
     <td><input type="text" data-z="name" value="${esc(z.name)}" style="width:110px"></td>
     <td>${curveSel(z.curve)}</td>
     <td><select data-z="floor.sensor" style="max-width:260px">${sensorOptions(z.floor?.sensor || "", "No floor")}</select></td>
@@ -877,6 +885,8 @@ function renderZoneSettings() {
       if (!inp.value) delete z.floor;
       else z.floor = Object.assign({ above: 60, pwm: 100 }, z.floor, { sensor: inp.value });
       if (inp.type !== "text") { inp.blur(); renderZoneSettings(); }
+    } else if (k === "enabled") {
+      if (inp.checked) delete z.enabled; else z.enabled = false;
     } else if (k.startsWith("floor.")) {
       if (z.floor) setP(z, k, +inp.value);
     } else {

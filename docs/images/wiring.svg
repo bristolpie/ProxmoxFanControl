@@ -30,6 +30,8 @@
       .lens  { stroke: #94a3b8; stroke-width: 1.2; fill: none; }
       .detail { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 1.2; }
       .splitter { fill: #f8fafc; stroke: #94a3b8; stroke-width: 1.5; }
+      .warn path { fill: #fbbf24; stroke: #b45309; stroke-width: 1.5; stroke-linejoin: round; }
+      .warn text { fill: #78350f; font-size: 12px; font-weight: 800; text-anchor: middle; }
       .fend  { fill: #ffffff; stroke: #1f2937; stroke-width: 2.5; }
       .mark circle { fill: #7c3aed; stroke: #ffffff; stroke-width: 2; }
       .mark text   { fill: #ffffff; font-size: 11px; font-weight: 700; text-anchor: middle; }
@@ -138,8 +140,6 @@
   <use href="#fan" x="980" y="365" width="40" height="40"/>
   <text class="zone" x="1032" y="372">Top fans</text>
   <text class="sub" x="1032" y="390">exhaust</text>
-  <text class="tiny" x="1032" y="406">daisy-chained</text>
-  <text class="tiny" x="1032" y="420">(pass-through fans)</text>
 
   <path class="leg" d="M804 545 H900"/>
   <use href="#fan" x="900" y="525" width="40" height="40"/>
@@ -152,11 +152,11 @@
   <g class="mark"><circle cx="789" cy="292" r="9"/><text x="789" y="296">1</text></g>
   <g class="mark"><circle cx="789" cy="452" r="9"/><text x="789" y="456">1</text></g>
   <g class="mark"><circle cx="354" cy="165" r="9"/><text x="354" y="169">2</text></g>
-  <g class="mark"><circle cx="354" cy="205" r="9"/><text x="354" y="209">3</text></g>
-  <g class="mark"><circle cx="354" cy="365" r="9"/><text x="354" y="369">3</text></g>
-  <g class="mark"><circle cx="354" cy="525" r="9"/><text x="354" y="529">3</text></g>
-  <g class="mark"><circle cx="1078" cy="226" r="9"/><text x="1078" y="230">4</text></g>
-  <g class="mark"><circle cx="1112" cy="402" r="9"/><text x="1112" y="406">4</text></g>
+  <g class="warn"><path d="M354 195 L365 213 L343 213 Z"/><text x="354" y="211">!</text></g>
+  <g class="warn"><path d="M354 355 L365 373 L343 373 Z"/><text x="354" y="371">!</text></g>
+  <g class="warn"><path d="M354 515 L365 533 L343 533 Z"/><text x="354" y="531">!</text></g>
+  <g class="mark"><circle cx="1078" cy="226" r="9"/><text x="1078" y="230">3</text></g>
+  <g class="mark"><circle cx="960" cy="368" r="9"/><text x="960" y="372">3</text></g>
 
   <!-- Legend -->
   <g transform="translate(60 668)">
@@ -170,6 +170,6 @@
   </g>
   <g class="mark"><circle cx="69" cy="728" r="9"/><text x="69" y="732">1</text></g><text class="sub" x="86" y="732">The SATA power plug goes in each splitter's single female end; the Arduino and the fans go on its male legs.</text>
   <g class="mark"><circle cx="69" cy="748" r="9"/><text x="69" y="752">2</text></g><text class="sub" x="86" y="752">All connectors on a splitter share GND, 12 V and PWM, and the SATA lead joins every splitter's ground at the PSU, so one Arduino GND wire grounds all three zones.</text>
-  <g class="mark"><circle cx="69" cy="768" r="9"/><text x="69" y="772">3</text></g><text class="sub" x="86" y="772">RPM: tach only gets from the fan to the Arduino if both of their legs carry pin 3. Many splitters wire pin 3 on one leg only, so check yours.</text>
-  <g class="mark"><circle cx="69" cy="788" r="9"/><text x="69" y="792">4</text></g><text class="sub" x="86" y="792">More fans in a zone: use a 1→3 / 1→4 splitter, or daisy-chain fans that have a pass-through connector.</text>
+  <g class="mark"><circle cx="69" cy="768" r="9"/><text x="69" y="772">3</text></g><text class="sub" x="86" y="772">More fans in a zone: use a 1→3 / 1→4 splitter, or daisy-chain fans that have a pass-through connector.</text>
+  <g class="warn"><path d="M69 779 L80 797 L58 797 Z"/><text x="69" y="795">!</text></g><text class="sub" x="86" y="792"><tspan font-weight="700" fill="#92400e">RPM may not work as drawn:</tspan> tach only reaches the Arduino if both of their splitter legs carry pin 3, and many splitters wire it on one leg only. Fan control is unaffected.</text>
 </svg>

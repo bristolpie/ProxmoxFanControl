@@ -47,20 +47,20 @@
     <text x="248" y="209">D2  tach</text><text x="248" y="229">D9  PWM</text>
     <text x="248" y="369">D3  tach</text><text x="248" y="389">D10 PWM</text>
     <text x="248" y="529">D4  tach</text><text x="248" y="549">D11 PWM</text>
-    <text x="248" y="604">GND</text>
+    <text x="248" y="169">GND</text>
   </g>
   <g fill="#fbbf24" stroke="#78350f" stroke-width="1">
     <rect x="256" y="201" width="8" height="8"/><rect x="256" y="221" width="8" height="8"/>
     <rect x="256" y="361" width="8" height="8"/><rect x="256" y="381" width="8" height="8"/>
     <rect x="256" y="521" width="8" height="8"/><rect x="256" y="541" width="8" height="8"/>
-    <rect x="256" y="596" width="8" height="8"/>
+    <rect x="256" y="161" width="8" height="8"/>
   </g>
 
   <!-- jumper wires -->
   <path class="tach" d="M264 205 H494"/><path class="pwm" d="M264 225 H494"/>
   <path class="tach" d="M264 365 H494"/><path class="pwm" d="M264 385 H494"/>
   <path class="tach" d="M264 525 H494"/><path class="pwm" d="M264 545 H494"/>
-  <path class="gnd" d="M264 600 H440 V165 H494"/>
+  <path class="gnd" d="M264 165 H494"/>
   <text class="sub" x="282" y="436">jumper wires</text>
   <text class="sub" x="282" y="452">(female–female Dupont)</text>
   <text class="sub" x="282" y="468">onto one male leg</text>

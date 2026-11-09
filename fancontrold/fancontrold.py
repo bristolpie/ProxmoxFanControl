@@ -82,8 +82,9 @@ DEFAULT_CONFIG = {
             "scrub":  [[30, 80], [40, 110], [50, 140], [60, 170], [70, 210], [75, 220]],
         }},
         {"name": "Disks", "sensor": "disks_max", "points": {
-            "normal": [[30, 0], [35, 70], [42, 110], [50, 170], [55, 220]],
-            "scrub":  [[25, 100], [32, 130], [40, 160], [48, 190], [55, 220]],
+            # never fully off: a drive stack needs some airflow; scrub starts higher to get ahead of the heat
+            "normal": [[25, 30], [30, 45], [35, 75], [40, 120], [44, 170], [48, 220], [52, 255]],
+            "scrub":  [[25, 100], [30, 100], [35, 130], [40, 160], [44, 200], [48, 255]],
         }},
     ],
     # Each zone follows a curve. Optional floor: if <sensor> is above <above>, PWM never drops below <pwm>.

@@ -103,29 +103,14 @@
   <path class="cable" d="M668 515 L740 475"/>
   <path class="leg" d="M668 515 L740 545"/>
 
-  <!-- female single ends (white) and male fan legs (dark) -->
-  <rect class="fend" x="740" y="145" width="36" height="20" rx="3"/>
-  <rect class="fend" x="740" y="305" width="36" height="20" rx="3"/>
-  <rect class="fend" x="740" y="465" width="36" height="20" rx="3"/>
-  <g class="conn">
-    <rect x="740" y="185" width="36" height="20" rx="3"/><rect x="740" y="225" width="36" height="20" rx="3"/>
-    <rect x="740" y="375" width="36" height="20" rx="3"/>
-    <rect x="740" y="535" width="36" height="20" rx="3"/>
-  </g>
-  <!-- the mating halves: SATA lead's male plug into each female end, fans' female plugs onto the male legs -->
-  <g class="conn">
-    <rect x="778" y="145" width="26" height="20" rx="3"/><rect x="778" y="305" width="26" height="20" rx="3"/><rect x="778" y="465" width="26" height="20" rx="3"/>
-  </g>
-  <g class="fend">
-    <rect x="778" y="185" width="26" height="20" rx="3"/><rect x="778" y="225" width="26" height="20" rx="3"/>
-    <rect x="778" y="375" width="26" height="20" rx="3"/><rect x="778" y="535" width="26" height="20" rx="3"/>
-  </g>
-  <text class="tiny" x="690" y="140">female end</text>
-  <text class="tiny" x="690" y="300">female end</text>
-  <text class="tiny" x="690" y="460">female end</text>
-  <text class="tiny" x="740" y="262">male legs</text>
-  <text class="tiny" x="740" y="412">male leg</text>
-  <text class="tiny" x="740" y="572">male leg</text>
+  <!-- each connection shows both halves, same size: F = female (white), M = male (dark) -->
+  <rect class="fend" x="740" y="145" width="30" height="20" rx="3"/><text x="755" y="159" fill="#1f2937" font-size="11" font-weight="700" text-anchor="middle">F</text><rect class="conn" x="774" y="145" width="30" height="20" rx="3"/><text x="789" y="159" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">M</text>
+  <rect class="fend" x="740" y="305" width="30" height="20" rx="3"/><text x="755" y="319" fill="#1f2937" font-size="11" font-weight="700" text-anchor="middle">F</text><rect class="conn" x="774" y="305" width="30" height="20" rx="3"/><text x="789" y="319" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">M</text>
+  <rect class="fend" x="740" y="465" width="30" height="20" rx="3"/><text x="755" y="479" fill="#1f2937" font-size="11" font-weight="700" text-anchor="middle">F</text><rect class="conn" x="774" y="465" width="30" height="20" rx="3"/><text x="789" y="479" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">M</text>
+  <rect class="conn" x="740" y="185" width="30" height="20" rx="3"/><text x="755" y="199" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">M</text><rect class="fend" x="774" y="185" width="30" height="20" rx="3"/><text x="789" y="199" fill="#1f2937" font-size="11" font-weight="700" text-anchor="middle">F</text>
+  <rect class="conn" x="740" y="225" width="30" height="20" rx="3"/><text x="755" y="239" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">M</text><rect class="fend" x="774" y="225" width="30" height="20" rx="3"/><text x="789" y="239" fill="#1f2937" font-size="11" font-weight="700" text-anchor="middle">F</text>
+  <rect class="conn" x="740" y="375" width="30" height="20" rx="3"/><text x="755" y="389" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">M</text><rect class="fend" x="774" y="375" width="30" height="20" rx="3"/><text x="789" y="389" fill="#1f2937" font-size="11" font-weight="700" text-anchor="middle">F</text>
+  <rect class="conn" x="740" y="535" width="30" height="20" rx="3"/><text x="755" y="549" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">M</text><rect class="fend" x="774" y="535" width="30" height="20" rx="3"/><text x="789" y="549" fill="#1f2937" font-size="11" font-weight="700" text-anchor="middle">F</text>
 
   <!-- fan power: SATA → 3 power-only fan plugs, one into each splitter's female end -->
   <rect class="box" x="790" y="30" width="250" height="70" rx="8"/>
@@ -134,14 +119,11 @@
   <path class="v12" d="M850 100 V475"/>
   <path class="v12" d="M804 155 H850 M804 315 H850 M804 475 H850"/>
   <circle cx="850" cy="155" r="5" fill="#eab308"/><circle cx="850" cy="315" r="5" fill="#eab308"/>
-  <text class="tiny" x="776" y="140">power in</text>
-  <text class="tiny" x="776" y="300">power in</text>
-  <text class="tiny" x="776" y="460">power in</text>
 
   <!-- connector key -->
   <text class="tiny" x="1062" y="44">Connectors</text>
-  <rect class="fend" x="1062" y="52" width="26" height="16" rx="3"/><text class="tiny" x="1096" y="64">female</text>
-  <rect class="conn" x="1062" y="76" width="26" height="16" rx="3"/><text class="tiny" x="1096" y="88">male</text>
+  <rect class="fend" x="1062" y="50" width="30" height="20" rx="3"/><text x="1077" y="64" fill="#1f2937" font-size="11" font-weight="700" text-anchor="middle">F</text><text class="tiny" x="1100" y="64">female</text>
+  <rect class="conn" x="1062" y="76" width="30" height="20" rx="3"/><text x="1077" y="90" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">M</text><text class="tiny" x="1100" y="90">male</text>
 
   <!-- fans -->
   <path class="leg" d="M804 195 H900 M804 235 H900"/>
@@ -166,9 +148,9 @@
 
 
   <!-- footnote markers: numbers match the notes at the bottom -->
-  <g class="mark"><circle cx="678" cy="136" r="9"/><text x="678" y="140">1</text></g>
-  <g class="mark"><circle cx="678" cy="296" r="9"/><text x="678" y="300">1</text></g>
-  <g class="mark"><circle cx="678" cy="456" r="9"/><text x="678" y="460">1</text></g>
+  <g class="mark"><circle cx="772" cy="134" r="9"/><text x="772" y="138">1</text></g>
+  <g class="mark"><circle cx="772" cy="294" r="9"/><text x="772" y="298">1</text></g>
+  <g class="mark"><circle cx="772" cy="454" r="9"/><text x="772" y="458">1</text></g>
   <g class="mark"><circle cx="380" cy="165" r="9"/><text x="380" y="169">2</text></g>
   <g class="mark"><circle cx="380" cy="205" r="9"/><text x="380" y="209">3</text></g>
   <g class="mark"><circle cx="380" cy="365" r="9"/><text x="380" y="369">3</text></g>

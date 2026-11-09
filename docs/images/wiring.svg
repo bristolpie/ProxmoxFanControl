@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="790" viewBox="0 0 1180 790" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13">
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="816" viewBox="0 0 1180 816" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13">
   <title>Wiring: SATA power into each fan splitter's female end; the Arduino and the fans on its male legs</title>
   <defs>
     <symbol id="fan" viewBox="-20 -20 40 40">
@@ -32,7 +32,7 @@
     </style>
   </defs>
 
-  <rect x="0" y="0" width="1180" height="790" rx="14" fill="#ffffff"/>
+  <rect x="0" y="0" width="1180" height="816" rx="14" fill="#ffffff"/>
 
   <!-- Host -->
   <rect class="box" x="60" y="30" width="200" height="70" rx="8"/>
@@ -120,11 +120,6 @@
   <path class="v12" d="M804 155 H850 M804 315 H850 M804 475 H850"/>
   <circle cx="850" cy="155" r="5" fill="#eab308"/><circle cx="850" cy="315" r="5" fill="#eab308"/>
 
-  <!-- connector key -->
-  <text class="tiny" x="1062" y="44">Connectors</text>
-  <rect class="fend" x="1062" y="50" width="30" height="20" rx="3"/><text x="1077" y="64" fill="#1f2937" font-size="11" font-weight="700" text-anchor="middle">F</text><text class="tiny" x="1100" y="64">female</text>
-  <rect class="conn" x="1062" y="76" width="30" height="20" rx="3"/><text x="1077" y="90" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">M</text><text class="tiny" x="1100" y="90">male</text>
-
   <!-- fans -->
   <path class="leg" d="M804 195 H900 M804 235 H900"/>
   <use href="#fan" x="900" y="175" width="40" height="40"/><use href="#fan" x="900" y="215" width="40" height="40"/>
@@ -164,9 +159,13 @@
     <path class="gnd" d="M170 0 H204"/><text x="214" y="4">GND (required)</text>
     <path class="tach" d="M340 0 H374"/><text x="384" y="4">Tach / RPM (optional)</text>
     <path class="v12" d="M560 0 H594"/><text x="604" y="4">12 V + GND fan power: never to the Arduino</text>
+
+    <!-- connectors -->
+    <rect class="fend" x="0" y="16" width="30" height="20" rx="3"/><text x="15" y="30" fill="#1f2937" font-size="11" font-weight="700" text-anchor="middle">F</text><rect class="conn" x="34" y="16" width="30" height="20" rx="3"/><text x="49" y="30" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">M</text><text x="74" y="30">4-pin PWM fan connector, female / male (Molex KK-style, 2.54 mm pitch)</text>
+    <rect x="560" y="22" width="8" height="8" fill="#fbbf24" stroke="#78350f" stroke-width="1"/><path class="leg" d="M568 26 H594"/><text x="604" y="30">Dupont jumper plug on a header pin (2.54 mm)</text>
   </g>
-  <g class="mark"><circle cx="69" cy="702" r="9"/><text x="69" y="706">1</text></g><text class="sub" x="86" y="706">The SATA power plug goes in each splitter's single female end; the Arduino and the fans go on its male legs.</text>
-  <g class="mark"><circle cx="69" cy="722" r="9"/><text x="69" y="726">2</text></g><text class="sub" x="86" y="726">All connectors on a splitter share GND, 12 V and PWM, and the SATA lead joins every splitter's ground at the PSU, so one Arduino GND wire grounds all three zones.</text>
-  <g class="mark"><circle cx="69" cy="742" r="9"/><text x="69" y="746">3</text></g><text class="sub" x="86" y="746">RPM: tach only gets from the fan to the Arduino if both of their legs carry pin 3. Many splitters wire pin 3 on one leg only, so check yours.</text>
-  <g class="mark"><circle cx="69" cy="762" r="9"/><text x="69" y="766">4</text></g><text class="sub" x="86" y="766">More fans in a zone: use a 1→3 / 1→4 splitter, or daisy-chain fans that have a pass-through connector.</text>
+  <g class="mark"><circle cx="69" cy="728" r="9"/><text x="69" y="732">1</text></g><text class="sub" x="86" y="732">The SATA power plug goes in each splitter's single female end; the Arduino and the fans go on its male legs.</text>
+  <g class="mark"><circle cx="69" cy="748" r="9"/><text x="69" y="752">2</text></g><text class="sub" x="86" y="752">All connectors on a splitter share GND, 12 V and PWM, and the SATA lead joins every splitter's ground at the PSU, so one Arduino GND wire grounds all three zones.</text>
+  <g class="mark"><circle cx="69" cy="768" r="9"/><text x="69" y="772">3</text></g><text class="sub" x="86" y="772">RPM: tach only gets from the fan to the Arduino if both of their legs carry pin 3. Many splitters wire pin 3 on one leg only, so check yours.</text>
+  <g class="mark"><circle cx="69" cy="788" r="9"/><text x="69" y="792">4</text></g><text class="sub" x="86" y="792">More fans in a zone: use a 1→3 / 1→4 splitter, or daisy-chain fans that have a pass-through connector.</text>
 </svg>

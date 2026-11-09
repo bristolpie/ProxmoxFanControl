@@ -540,12 +540,13 @@ function drawHistory() {
   legend($("#lg-temp"), [...ts, { name: "Scrub profile", color: css("--scrub") }]);
   timeChart($("#ch-temp"), { series: ts, bands, yUnit: "°", fmt: v => v.toFixed(1) + "°C" });
   const names = Object.fromEntries((status?.zones || []).map(z => [z.id, z.name]));
-  const wired = (status?.zones || []).filter(z => z.tach).map(z => z.id);
+  const shown = (status?.zones || []).filter(z => z.enabled !== false);   // disabled zones aren't charted
+  const wired = shown.filter(z => z.tach).map(z => z.id);
   $("#pwm-mode").style.display = wired.length ? "" : "none";
   if (!wired.length && pwmMode === "rpm") { pwmMode = "pwm"; $$("#pwm-mode button").forEach(x => x.classList.toggle("on", x.dataset.v === "pwm")); }
   const zs = pwmMode === "rpm"
     ? wired.map(id => ({ name: `Z${id} ${names[id] || ""}`, color: zoneColor(id), values: col(5 + id) }))
-    : [1, 2, 3].map(id => ({ name: `Z${id} ${names[id] || ""}`, color: zoneColor(id), values: col(2 + id, pct) }));
+    : (shown.length ? shown.map(z => z.id) : [1, 2, 3]).map(id => ({ name: `Z${id} ${names[id] || ""}`, color: zoneColor(id), values: col(2 + id, pct) }));
   legend($("#lg-pwm"), zs);
   timeChart($("#ch-pwm"), pwmMode === "rpm"
     ? { series: zs, yMin: 0, fmt: v => v + " rpm", height: 200 }

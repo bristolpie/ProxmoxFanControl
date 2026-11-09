@@ -4,6 +4,12 @@
 
 Temperature-driven fan control for a Proxmox / ZFS server, using an Arduino Nano as a 3-zone 25 kHz PWM controller over USB. Includes a web dashboard for live temps, fan speeds, history graphs, curve editing and manual overrides.
 
+## Why
+
+Many home servers are built from ex-office PCs, such as a Dell OptiPlex SFF board moved into a bigger case with a stack of hard drives for ZFS. These boards usually have one fan header, for the CPU cooler, and the BIOS controls it with no way to change it. Any case fans you add either run flat out all the time (loud) or at a fixed slow speed (drives run hot, especially during a multi-hour ZFS scrub). The usual Linux tools (`fancontrol`, `lm-sensors`) can't help, because they can only drive fans plugged into the motherboard.
+
+This project adds the missing fan controller. An Arduino Nano (a few pounds) plugged into a USB port drives up to three zones of standard 4-pin PWM fans. A small service on the Proxmox host reads the drive and CPU temperatures and sets the fan speeds from curves you choose. Front fans can follow the hottest drive in the pool, exhaust fans can speed up when the CPU is working hard, and everything runs faster while a scrub is in progress. It's tuned for storage servers, but works on any Linux machine where the motherboard can't control the case fans.
+
 ![Dashboard](docs/images/dashboard.png)
 
 - **Sensors found automatically.** CPU, every disk, NVMe drives, motherboard and GPU sensors (whatever the kernel exposes), plus combined sensors such as "hottest disk" and "hottest disk in ZFS pool `tank`".
@@ -212,6 +218,10 @@ systemd/                        service unit
 install.sh                      installer / uninstaller
 flash.sh                        flash the firmware from the host
 ```
+
+## Contributing
+
+This is a personal project, so issues and pull requests are turned off. You're welcome to fork it and adapt it to your own hardware.
 
 ## License
 

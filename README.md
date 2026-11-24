@@ -10,6 +10,8 @@ Many home servers are built from ex-office PCs, such as a Dell OptiPlex SFF boar
 
 This project adds the missing fan controller. An Arduino Nano (a few pounds) plugged into a USB port drives up to three zones of standard 4-pin PWM fans. A small service on the Proxmox host reads the drive and CPU temperatures and sets the fan speeds from curves you choose. Front fans can follow the hottest drive in the pool, exhaust fans can speed up when the CPU is working hard, and everything runs faster while a scrub is in progress. It's tuned for storage servers, but works on any Linux machine where the motherboard can't control the case fans.
 
+**Background.** I'm a software engineer of many years. This started as an old side project for my own server, and I recently revived it and rewrote it with help from [Claude Code](https://claude.com/claude-code), Anthropic's AI coding assistant (you'll see it as co-author on the commits). I designed it, reviewed the code, and run it on my own Proxmox host, the one in the wiring diagram.
+
 > [!WARNING]
 > **Use at your own risk.** This software controls the cooling of your server. A wiring mistake, a bad fan curve or a bug can let drives or the CPU overheat, or damage the Arduino, the fans or the host. It comes with no warranty (see [LICENSE](LICENSE)).
 >

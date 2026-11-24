@@ -267,6 +267,8 @@ flash.sh                        flash the firmware from the host
 
 ## Contributing
 
+Feedback is welcome in [Discussions](https://github.com/bristolpie/ProxmoxFanControl/discussions): ask for help in **Q&A**, suggest features in **Ideas**, or share your build in **Show and tell**. Bug reports go there too.
+
 This is a personal project, so issues and pull requests are turned off. You're welcome to fork it and adapt it to your own hardware.
 
 ## License
